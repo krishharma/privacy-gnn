@@ -17,6 +17,7 @@
 \usepackage{bbm}
 \usepackage{balance}
 \usepackage{placeins}
+\usepackage{url}
 \usetikzlibrary{shapes.geometric, arrows.meta, positioning, fit, backgrounds}
 \def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
     T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
@@ -631,7 +632,7 @@ This paper studied when graph neural networks leak information about which nodes
 The defense results also show that lightweight privacy mechanisms must be evaluated carefully. Label smoothing, which is often expected to reduce overconfidence, frequently increased attack AUROC in our experiments. Edge sparsification produced mixed results after being implemented as permanent undirected edge thinning for both training and inference. Overall, the most important lesson is that privacy risk in graph learning is \emph{structurally contingent}: it must be measured under the specific graph, model, and deployment setting being used. Future work should expand this study with larger replications, stronger likelihood-ratio attacks \cite{carlini2022membership}, low-false-positive-rate auditing, feature-difficulty ablations, and differentially private GNN baselines \cite{sajadmanesh2023gap}. These extensions would support broader model-risk and deployment auditing practices for graph-based machine learning systems \cite{jayaraman2019evaluating,tramer2016stealing}.
 
 \section*{Code Availability}
-The accompanying repository provides YAML configuration, PyTorch and scikit-learn implementations, CSV aggregation, and matplotlib figure scripts to reproduce tables and plots.
+The code and experiment configuration files used in this study are publicly available at \url{https://github.com/krishharma/privacy-gnn}. The repository includes YAML configuration files, PyTorch and scikit-learn implementations, CSV aggregation scripts, and matplotlib figure-generation scripts needed to reproduce the reported tables and plots.
 
 \section*{Acknowledgment}
 Research conducted in the Data Science Laboratory (DiSC), University of Nevada, Las Vegas.
