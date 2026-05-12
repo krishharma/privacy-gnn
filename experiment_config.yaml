@@ -1,0 +1,93 @@
+# PrivacyGNN experiment configuration (config-driven experiments).
+# METHODOLOGICAL CONTRIBUTION (update paper narrative): orthogonal control of homophily
+# and density in data.make_synthetic is the core controlled study.
+# EXTENSIONS FOR PUBLICATION: large OGB/Reddit-style benchmarks (ogbn-arxiv), LiRA,
+# bootstrap CIs over seeds, and optional DP-SGD GNN baseline — see README.md TODO.
+
+seeds: [42, 123, 456, 789, 1024, 2024, 3141, 5000, 7777, 9999]
+
+datasets:
+  - Cora
+  - Citeseer
+  - synthetic_high_sparse
+  - synthetic_high_medium
+  - synthetic_high_dense
+  - synthetic_low_sparse
+  - synthetic_low_medium
+  - synthetic_low_dense
+  # ogbn-arxiv requires a full OGB + neighbor-sampling pipeline (see ogb_loader.py stub).
+  # - ogbn-arxiv
+  # Optional large graph (uncomment; uses NeighborLoader — slower):
+  # - Reddit
+
+models:
+  - LogReg
+  - MLP
+  - GCN
+  - GraphSAGE
+
+# Which attacks to run (ϕ1–ϕ4 features unchanged for confidence/threshold/shadow).
+attacks:
+  - confidence
+  - threshold
+  - shadow
+  - lira
+
+lira:
+  n_shadows: 3
+
+# Bootstrap percentile CIs resampling seeds (separate from exploratory t-tests in significance*.csv).
+bootstrap:
+  n_resamples: 1000
+  confidence: 0.95
+
+# Neighbor sampling for ogbn-arxiv / Reddit / ogbn-products.
+minibatch:
+  batch_size: 1024
+  num_neighbors: [15, 10]
+
+# Target split for OGB: official train/val/test (true) or random resplit like Planetoid (false).
+large_graph_use_official_split: true
+
+# DP-SGD-style baseline (heuristic; see graph_minibatch.train_gnn_dp_minibatch docstring).
+# Only applied to GCN/GraphSAGE. Restrict datasets below to keep runtime reasonable.
+dp_sgd:
+  max_grad_norm: 1.0
+  noise_multiplier: 1.0
+  delta: 1.0e-5
+  epochs: 15
+  batch_size: 1024
+  lr: 0.05
+
+dp_sgd_datasets:
+  - synthetic_high_medium
+  - synthetic_low_medium
+  - ogbn-arxiv
+
+# Defenses: baselines (LogReg, MLP) use only "none" (enforced in config.get_experiment_list).
+defenses:
+  - name: none
+    params: {}
+  - name: dropedge
+    params: { rate: 0.3 }
+  - name: label_smoothing
+    params: { alpha: 0.1 }
+  - name: early_stopping
+    params: { patience: 15 }
+  - name: confidence_masking
+    params: { top_k: 2 }
+  - name: edge_sparsification
+    params: { rate: 0.2 }
+  - name: dp_sgd
+    params: {}
+
+training:
+  epochs: 50
+  lr: 0.01
+  weight_decay: 0.0005
+
+device: cpu
+
+results_dir: results
+data_dir: data
+figures_dir: figures

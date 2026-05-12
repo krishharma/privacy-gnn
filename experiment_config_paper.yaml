@@ -1,0 +1,51 @@
+# Paper / figure pipeline: Cora + Citeseer + six synthetic regimes, no OGB/Reddit/LiRA/dp_sgd.
+# Matches ieee_privacy_gnn.tex factorial (5 seeds, 6 GNN defenses + none).
+# Usage: PRIVACYGNN_CONFIG=experiment_config_paper.yaml python run_final.py
+
+seeds: [42, 123, 456, 789, 1024]
+
+datasets:
+  - Cora
+  - Citeseer
+  - synthetic_high_sparse
+  - synthetic_high_medium
+  - synthetic_high_dense
+  - synthetic_low_sparse
+  - synthetic_low_medium
+  - synthetic_low_dense
+
+models:
+  - LogReg
+  - MLP
+  - GCN
+  - GraphSAGE
+
+attacks:
+  - confidence
+  - threshold
+  - shadow
+
+defenses:
+  - name: none
+    params: {}
+  - name: dropedge
+    params: { rate: 0.3 }
+  - name: label_smoothing
+    params: { alpha: 0.1 }
+  - name: early_stopping
+    params: { patience: 15 }
+  - name: confidence_masking
+    params: { top_k: 2 }
+  - name: edge_sparsification
+    params: { rate: 0.2 }
+
+training:
+  epochs: 50
+  lr: 0.01
+  weight_decay: 0.0005
+
+device: cpu
+
+results_dir: results
+data_dir: data
+figures_dir: figures

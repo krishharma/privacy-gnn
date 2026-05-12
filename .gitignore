@@ -1,0 +1,29 @@
+.DS_Store
+__pycache__/
+*.py[cod]
+
+# Local datasets/downloads can be large and are reproducible.
+data/
+
+# LaTeX build artifacts.
+*.aux
+*.log
+*.out
+*.toc
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+missfont.log
+
+# Local presentation/export artifacts.
+*.pptx
+Project-PrivacyGNN-*.pdf
+
+# Partial/interrupted experiment output.
+results/*.partial.csv
+
+# Virtual environments and local settings.
+.venv/
+venv/
+.env
+*.env
