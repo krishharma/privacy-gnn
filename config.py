@@ -17,7 +17,7 @@ FIGURES_DIR = os.path.join(ROOT, "figures")
 DEVICE = "cpu"
 SEEDS = [42, 123, 456, 789, 1024]
 
-DEFAULT_ATTACKS = ["confidence", "threshold", "shadow", "lira"]
+DEFAULT_ATTACKS = ["confidence", "threshold", "shadow", "lira", "label_only"]
 
 # Default experiment grid (overridden by config file if present)
 DATASETS = [
@@ -38,6 +38,7 @@ DEFENSES = [
     ("early_stopping", {"patience": 15}),
     ("confidence_masking", {"top_k": 2}),
     ("edge_sparsification", {"rate": 0.2}),
+    ("epsd", {"lambda_epsd": 1.0}),
 ]
 
 
@@ -122,6 +123,11 @@ def get_experiment_list(config=None):
     if config is None:
         config = load_config()
     exps = []
+    
+    # 10 seeds for small graphs, 5 seeds for OGB
+    small_seeds = config["seeds"]
+    ogb_seeds = small_seeds[:5]
+    
     for ds in config["datasets"]:
         for model in config["models"]:
             for dn, dp in config["defenses"]:
@@ -133,7 +139,18 @@ def get_experiment_list(config=None):
                     allow = config.get("dp_sgd_datasets")
                     if allow is not None and ds not in allow:
                         continue
-                for seed in config["seeds"]:
+                        
+                # OGB restriction: only GCN/GraphSAGE and specific defenses
+                if ds == "ogbn-arxiv":
+                    if model not in ("GCN", "GraphSAGE"):
+                        continue
+                    if dn not in ("none", "label_smoothing", "epsd", "dp_sgd"):
+                        continue
+                        
+                # Pick seed list based on dataset
+                seeds = ogb_seeds if ds == "ogbn-arxiv" else small_seeds
+                        
+                for seed in seeds:
                     exps.append((ds, model, dn, dp, seed))
     return exps
 

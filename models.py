@@ -12,8 +12,8 @@ class GCN(nn.Module):
 
     def __init__(self, ic, h, oc):
         super().__init__()
-        self.c1 = GCNConv(ic, h)
-        self.c2 = GCNConv(h, oc)
+        self.c1 = GCNConv(ic, h, bias=False)
+        self.c2 = GCNConv(h, oc, bias=False)
 
     def forward(self, x, e):
         x = self.c1(x, e)
@@ -27,8 +27,8 @@ class SAGE(nn.Module):
 
     def __init__(self, ic, h, oc):
         super().__init__()
-        self.c1 = SAGEConv(ic, h)
-        self.c2 = SAGEConv(h, oc)
+        self.c1 = SAGEConv(ic, h, bias=False)
+        self.c2 = SAGEConv(h, oc, bias=False)
 
     def forward(self, x, e):
         x = self.c1(x, e)

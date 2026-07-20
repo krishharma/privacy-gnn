@@ -1,0 +1,29 @@
+seeds: [42, 123, 456, 789, 1024]
+
+datasets:
+  - ogbn-arxiv
+
+models:
+  - GCN
+  - GraphSAGE
+
+attacks:
+  - confidence
+  - label_only
+
+defenses:
+  - name: none
+    params: {}
+  - name: epsd
+    params: { lambda_epsd: 5.0 }
+
+training:
+  epochs: 50
+  lr: 0.01
+  weight_decay: 0.0005
+
+device: cpu
+
+results_dir: results_ogbn
+data_dir: data
+figures_dir: figures_ogbn

@@ -8,7 +8,9 @@ from __future__ import annotations
 
 import json
 import math
+import time
 import os
+import hashlib
 import numpy as np
 import torch
 import torch.nn.functional as F
@@ -30,7 +32,7 @@ from training import train_gnn
 from attacks import confidence_attack, shadow_attack, calibration_error
 from ogb_loader import MINIBATCH_DATASETS, load_large_benchmark
 from graph_minibatch import train_gnn_minibatch, infer_logits_minibatch, train_gnn_dp_minibatch
-from lira_attack import lira_gaussian_auc
+from epsd_utils import compute_ego_gap
 
 
 def _apply_confidence_masking(p: np.ndarray, cmk: int | None) -> np.ndarray:
@@ -52,7 +54,7 @@ def _load_target_data(dataset_name: str, data_dir: str, seed: int, use_official_
         return resplit(data, seed), num_classes, num_features
     if dataset_name.startswith("synthetic_"):
         parts = dataset_name.split("_")
-        return make_synthetic(homo=parts[1], dens=parts[2], seed=seed)
+        return make_synthetic(homo=parts[1], dens=parts[2], seed=seed, center_std=0.5, noise_std=1.5)
     if dataset_name in MINIBATCH_DATASETS:
         if dataset_name == "Reddit":
             root = os.path.join(data_dir, "pyg")
@@ -71,7 +73,7 @@ def _make_shadow_data(dataset_name: str, data_dir: str, shadow_seed: int):
         return resplit(sd, shadow_seed), nc, nf
     if dataset_name.startswith("synthetic_"):
         parts = dataset_name.split("_")
-        return make_synthetic(homo=parts[1], dens=parts[2], seed=shadow_seed)
+        return make_synthetic(homo=parts[1], dens=parts[2], seed=shadow_seed, center_std=0.5, noise_std=1.5)
     if dataset_name in MINIBATCH_DATASETS:
         if dataset_name == "Reddit":
             root = os.path.join(data_dir, "pyg")
@@ -105,9 +107,7 @@ def run_one(
     if training_kwargs is None:
         training_kwargs = config.get("training", {})
 
-    attacks = {a.lower() for a in config.get("attacks", ["confidence", "threshold", "shadow", "lira"])}
-    lira_cfg = config.get("lira", {"n_shadows": 3})
-    n_lira_shadows = int(lira_cfg.get("n_shadows", 3))
+    attacks = {a.lower() for a in config.get("attacks", ["confidence", "threshold", "shadow", "label_only"])}
     mb = config.get("minibatch", {})
     batch_size = int(mb.get("batch_size", 1024))
     num_neighbors = mb.get("num_neighbors", [15, 10])
@@ -138,15 +138,24 @@ def run_one(
         cmk = int(defense_params.get("top_k", 2))
     elif defense_name == "edge_sparsification":
         tk["edge_sparsify_rate"] = defense_params.get("rate", 0.2)
+    elif defense_name == "epsd":
+        tk["epsd_lambda"] = defense_params.get("lambda_epsd", 1.0)
+        tk["epsd_ablation"] = defense_params.get("ablation", "none")
 
     use_minibatch = dataset_name in MINIBATCH_DATASETS
     dp_epsilon = float("nan")
+    dp_delta = float("nan")
+    dp_noise_multiplier = float("nan")
+    dp_clip_norm = float("nan")
 
     trm = data.train_mask.cpu().numpy()
     tem = data.test_mask.cpu().numpy()
     yn = data.y.cpu().numpy()
 
     # --- Train target and predict probabilities ---
+    train_time = 0.0
+    t0 = time.time()
+    
     if model_name in ("GCN", "GraphSAGE"):
         model = (GCN if model_name == "GCN" else SAGE)(
             ic=num_features, h=64, oc=num_classes
@@ -166,6 +175,10 @@ def run_one(
             dp_c = float(dp_cfg.get("max_grad_norm", 1.0))
             dp_nm = float(dp_cfg.get("noise_multiplier", 1.0))
             dp_delta = float(dp_cfg.get("delta", 1e-5))
+            
+            dp_clip_norm = dp_c
+            dp_noise_multiplier = dp_nm
+            
             model, dp_epsilon = train_gnn_dp_minibatch(
                 model,
                 train_data,
@@ -181,12 +194,13 @@ def run_one(
                 delta=dp_delta,
                 dropedge_rate=float(tk.get("dropedge_rate", 0.0) or 0.0),
             )
+            metrics = {k: float("nan") for k in ['normal_loss_ep1', 'epsd_kl_loss_ep1', 'total_loss_ep1', 'normal_loss_final', 'epsd_kl_loss_final', 'total_loss_final']}
         elif use_minibatch:
             es = tk.get("early_stop_patience")
             val_mask = getattr(data, "val_mask", None)
             if val_mask is None or not val_mask.any():
                 val_mask = None
-            train_gnn_minibatch(
+            model, metrics = train_gnn_minibatch(
                 model,
                 train_data,
                 device,
@@ -200,9 +214,11 @@ def run_one(
                 label_smoothing=float(tk.get("label_smoothing", 0.0) or 0.0),
                 dropedge_rate=float(tk.get("dropedge_rate", 0.0) or 0.0),
                 val_mask=val_mask,
+                epsd_lambda=float(tk.get("epsd_lambda", 0.0) or 0.0),
+                epsd_ablation=tk.get("epsd_ablation", "none"),
             )
         else:
-            train_gnn(
+            model, metrics = train_gnn(
                 model,
                 train_data,
                 device,
@@ -213,9 +229,12 @@ def run_one(
                 label_smoothing=tk.get("label_smoothing", 0.0),
                 dropedge_rate=tk.get("dropedge_rate", 0.0),
                 edge_sparsify_rate=0.0,
+                epsd_lambda=tk.get("epsd_lambda", 0.0),
+                epsd_ablation=tk.get("epsd_ablation", "none"),
             )
 
-        model.eval()
+        if hasattr(model, "eval"):
+            model.eval()
         with torch.no_grad():
             if use_minibatch:
                 logits = infer_logits_minibatch(
@@ -232,8 +251,17 @@ def run_one(
                 logits = model(train_data.x.to(device), train_data.edge_index.to(device))
         p = F.softmax(logits, 1).cpu().numpy()
         pr = logits.argmax(1).cpu().numpy()
+        
+        # Calculate Hashes
+        state_dict_bytes = b"".join(v.cpu().numpy().tobytes() for v in model.state_dict().values())
+        model_sha256 = hashlib.sha256(state_dict_bytes).hexdigest()
+        prediction_sha256 = hashlib.sha256(p.tobytes()).hexdigest()
+        
         p = _apply_confidence_masking(p, cmk)
     else:
+        metrics = {k: float("nan") for k in ['normal_loss_ep1', 'epsd_kl_loss_ep1', 'total_loss_ep1', 'normal_loss_final', 'epsd_kl_loss_final', 'total_loss_final']}
+        model_sha256 = "N/A"
+        prediction_sha256 = "N/A"
         Xn = data.x.numpy()
         if model_name == "LogReg":
             clf = LogisticRegression(max_iter=1000, random_state=int(seed))
@@ -242,8 +270,10 @@ def run_one(
                 hidden_layer_sizes=(64, 32), max_iter=200, random_state=int(seed)
             )
         clf.fit(Xn[trm], yn[trm])
+        train_time = time.time() - t0
         p = clf.predict_proba(Xn)
         pr = clf.predict(Xn)
+        prediction_sha256 = hashlib.sha256(p.tobytes()).hexdigest()
         p = _apply_confidence_masking(p, cmk)
 
     ta = accuracy_score(yn[tem], pr[tem])
@@ -255,19 +285,77 @@ def run_one(
 
     run_conf = ("confidence" in attacks) or ("threshold" in attacks)
     run_shadow = "shadow" in attacks
-    run_lira = "lira" in attacks
+    run_label_only = "label_only" in attacks
+    run_loss = "loss" in attacks
 
-    ca = cac = ta2 = tac2 = float("nan")
+    if use_minibatch:
+        print(f"Sampling Parameters: batch_size={batch_size}, num_neighbors={num_neighbors} (using {len(num_neighbors)} hop subgraphs)")
+
+    print(f"--- Threat Model Definition ({dataset_name}) ---")
+    print("Membership: Target nodes included in the training loss (members) vs. nodes in the class-stratified validation/test set (non-members).")
+    print("Attacker Capability: Black-box. Attacker observes model posteriors but not model weights or embeddings.")
+    if run_shadow:
+        print("Shadow Model: Disjoint data split. Attack model tuned on shadow-val and evaluated on target test.")
+
+    ca = cac = ca_tpr01 = ca_tpr05 = ca_adv = ta2 = tac2 = ta2_tpr01 = ta2_tpr05 = ta2_adv = float("nan")
+    loa = loac = loa_tpr01 = loa_tpr05 = loa_adv = flip_rate = float("nan")
+    lsa = lsac = lsa_tpr01 = lsa_tpr05 = lsa_adv = float("nan")
+
+    # Combine validation into non-members if it exists
+    tem_pool = tem.copy()
+    if hasattr(data, 'val_mask') and data.val_mask is not None and data.val_mask.any():
+        tem_pool = tem_pool | data.val_mask.cpu().numpy()
+
+    # Create class-stratified balanced attack masks
+    def _balance_masks(m_mask, nm_mask, y, rs):
+        rng = np.random.RandomState(int(rs))
+        m_idx = np.where(m_mask)[0]
+        nm_idx = np.where(nm_mask)[0]
+        classes = np.unique(y)
+        m_out, nm_out = [], []
+        for c in classes:
+            mc = m_idx[y[m_idx] == c]
+            nmc = nm_idx[y[nm_idx] == c]
+            k = min(len(mc), len(nmc))
+            if k > 0:
+                m_out.append(rng.choice(mc, k, replace=False))
+                nm_out.append(rng.choice(nmc, k, replace=False))
+        new_m = np.zeros_like(m_mask, dtype=bool)
+        new_nm = np.zeros_like(nm_mask, dtype=bool)
+        if m_out:
+            new_m[np.concatenate(m_out)] = True
+            new_nm[np.concatenate(nm_out)] = True
+        return new_m, new_nm
+
+    trm_att, tem_att = _balance_masks(trm, tem_pool, yn, seed)
+
     if run_conf:
-        ca, cac, ta2, tac2 = confidence_attack(
-            p[trm], p[tem], yn[trm], yn[tem], random_state=int(seed)
+        c_res = confidence_attack(
+            p[trm_att], p[tem_att], yn[trm_att], yn[tem_att], random_state=int(seed)
         )
+        ca, cac, ca_tpr01, ca_tpr05, ca_adv = c_res['conf_auc'], c_res['conf_acc'], c_res['conf_tpr_01'], c_res['conf_tpr_05'], c_res['conf_adv']
+        ta2, tac2, ta2_tpr01, ta2_tpr05, ta2_adv = c_res['thresh_auc'], c_res['thresh_acc'], c_res['thresh_tpr_01'], c_res['thresh_tpr_05'], c_res['thresh_adv']
 
-    sa = sac = float("nan")
-    la = lac = float("nan")
+    if run_label_only:
+        from attacks import label_only_attack
+        target_model = model if model_name in ("GCN", "GraphSAGE") else clf
+        l_res = label_only_attack(target_model, train_data if model_name in ("GCN", "GraphSAGE") else data, trm_att, tem_att)
+        loa, loac, loa_tpr01, loa_tpr05, loa_adv = l_res['auc'], l_res['acc'], l_res['tpr_01'], l_res['tpr_05'], l_res['adv']
+        flip_rate = l_res['flip_rate']
 
-    need_shadows = run_shadow or run_lira
-    n_shadow_train = n_lira_shadows if run_lira else (1 if run_shadow else 0)
+    if run_loss:
+        from attacks import loss_attack
+        def get_loss(probs, labels):
+            return -np.log(probs[np.arange(len(probs)), labels] + 1e-10)
+        m_loss = get_loss(p[trm_att], yn[trm_att])
+        nm_loss = get_loss(p[tem_att], yn[tem_att])
+        ls_res = loss_attack(m_loss, nm_loss)
+        lsa, lsac, lsa_tpr01, lsa_tpr05, lsa_adv = ls_res['auc'], ls_res['acc'], ls_res['tpr_01'], ls_res['tpr_05'], ls_res['adv']
+
+    sa = sac = sa_tpr01 = sa_tpr05 = sa_adv = float("nan")
+
+    need_shadows = run_shadow
+    n_shadow_train = 1 if run_shadow else 0
 
     shadow_probs_list = []
     shadow_tr_masks = []
@@ -308,12 +396,13 @@ def run_one(
                         max_grad_norm=float(dp_cfg.get("max_grad_norm", 1.0)),
                         noise_multiplier=float(dp_cfg.get("noise_multiplier", 1.0)),
                         delta=float(dp_cfg.get("delta", 1e-5)),
+                        dropedge_rate=float(tk.get("dropedge_rate", 0.0) or 0.0),
                     )
                 elif use_minibatch:
                     val_mask = getattr(shadow_data, "val_mask", None)
                     if val_mask is None or not val_mask.any():
                         val_mask = None
-                    train_gnn_minibatch(
+                    _, _ = train_gnn_minibatch(
                         shadow_model,
                         shadow_train_data,
                         device,
@@ -329,7 +418,7 @@ def run_one(
                         val_mask=val_mask,
                     )
                 else:
-                    train_gnn(
+                    _, _ = train_gnn(
                         shadow_model,
                         shadow_train_data,
                         device,
@@ -341,7 +430,8 @@ def run_one(
                         dropedge_rate=tk.get("dropedge_rate", 0.0),
                         edge_sparsify_rate=0.0,
                     )
-                shadow_model.eval()
+                if hasattr(shadow_model, "eval"):
+                    shadow_model.eval()
                 with torch.no_grad():
                     if use_minibatch:
                         slogits = infer_logits_minibatch(
@@ -381,36 +471,34 @@ def run_one(
             p_sh0 = shadow_probs_list[0]
             sh_tr0 = shadow_tr_masks[0]
             sh_te0 = shadow_te_masks[0]
+            
+            sh_tr_att, sh_te_att = _balance_masks(sh_tr0, sh_te0, sh_y, seed)
             try:
-                sa, sac = shadow_attack(
-                    p_sh0[sh_tr0],
-                    p_sh0[sh_te0],
-                    sh_y[sh_tr0],
-                    sh_y[sh_te0],
-                    p[trm],
-                    p[tem],
-                    yn[trm],
-                    yn[tem],
-                    random_state=int(seed),
+                s_res = shadow_attack(
+                    p_sh0[sh_tr_att], p_sh0[sh_te_att], sh_y[sh_tr_att], sh_y[sh_te_att],
+                    p[trm_att], p[tem_att], yn[trm_att], yn[tem_att], random_state=int(seed),
                 )
+                sa, sac, sa_tpr01, sa_tpr05, sa_adv = s_res['auc'], s_res['acc'], s_res['tpr_01'], s_res['tpr_05'], s_res['adv']
             except Exception:
-                sa, sac = 0.5, 0.5
+                sa, sac, sa_tpr01, sa_tpr05, sa_adv = 0.5, 0.5, 0.0, 0.0, 0.0
 
-        if run_lira and shadow_probs_list:
-            try:
-                la, lac = lira_gaussian_auc(
-                    p,
-                    yn,
-                    trm,
-                    tem,
-                    shadow_probs_list,
-                    shadow_tr_masks,
-                    shadow_te_masks,
-                )
-            except Exception:
-                la, lac = 0.5, 0.5
+                sa, sac, sa_tpr01, sa_tpr05, sa_adv = 0.5, 0.5, 0.0, 0.0, 0.0
 
     ece = calibration_error(p[tem], yn[tem])
+
+    train_ego_gap = test_ego_gap = ego_gap_diff = float("nan")
+    train_ego_gap_std = test_ego_gap_std = float("nan")
+    if model_name in ("GCN", "GraphSAGE"):
+        try:
+            g_train = compute_ego_gap(model, data, np.where(trm)[0])
+            g_test = compute_ego_gap(model, data, np.where(tem)[0])
+            train_ego_gap = float(g_train.mean())
+            test_ego_gap = float(g_test.mean())
+            train_ego_gap_std = float(g_train.std())
+            test_ego_gap_std = float(g_test.std())
+            ego_gap_diff = float(train_ego_gap - test_ego_gap)
+        except Exception:
+            pass
 
     def _r(x):
         if x is None or (isinstance(x, float) and math.isnan(x)):
@@ -425,17 +513,61 @@ def run_one(
         "seed": seed,
         "homophily": round(h, 4),
         "density": round(dens_val, 6),
+        "train_time_seconds": round(train_time, 4),
         "test_accuracy": _r(ta),
         "test_f1": _r(tf),
         "test_auroc": _r(tau),
+        "train_ego_gap": _r(train_ego_gap),
+        "train_ego_gap_std": _r(train_ego_gap_std),
+        "test_ego_gap": _r(test_ego_gap),
+        "test_ego_gap_std": _r(test_ego_gap_std),
+        "ego_gap_diff": _r(ego_gap_diff),
         "conf_attack_auc": _r(ca),
         "conf_attack_acc": _r(cac),
+        "conf_attack_tpr01": _r(ca_tpr01),
+        "conf_attack_tpr05": _r(ca_tpr05),
+        "conf_attack_adv": _r(ca_adv),
         "threshold_attack_auc": _r(ta2),
         "threshold_attack_acc": _r(tac2),
+        "threshold_attack_tpr01": _r(ta2_tpr01),
+        "threshold_attack_tpr05": _r(ta2_tpr05),
+        "threshold_attack_adv": _r(ta2_adv),
         "shadow_attack_auc": _r(sa),
         "shadow_attack_acc": _r(sac),
-        "lira_attack_auc": _r(la),
-        "lira_attack_acc": _r(lac),
+        "shadow_attack_tpr01": _r(sa_tpr01),
+        "shadow_attack_tpr05": _r(sa_tpr05),
+        "shadow_attack_adv": _r(sa_adv),
+        "label_only_attack_auc": _r(loa),
+        "label_only_attack_acc": _r(loac),
+        "label_only_attack_tpr01": _r(loa_tpr01),
+        "label_only_attack_tpr05": _r(loa_tpr05),
+        "label_only_attack_adv": _r(loa_adv),
+        "label_only_flip_rate": _r(flip_rate),
+        "loss_attack_auc": _r(lsa),
+        "loss_attack_acc": _r(lsac),
+        "loss_attack_tpr01": _r(lsa_tpr01),
+        "loss_attack_tpr05": _r(lsa_tpr05),
+        "loss_attack_adv": _r(lsa_adv),
         "ece_test": _r(ece),
-        "dp_epsilon": _r(dp_epsilon) if defense_name == "dp_sgd" else float("nan"),
+        "actual_dp_epsilon": _r(dp_epsilon) if defense_name == "dp_sgd" else float("nan"),
+        "dp_delta": _r(dp_delta) if defense_name == "dp_sgd" else float("nan"),
+        "dp_clip_norm": _r(dp_clip_norm) if defense_name == "dp_sgd" else float("nan"),
+        "dp_noise_multiplier": _r(dp_noise_multiplier) if defense_name == "dp_sgd" else float("nan"),
+        "lambda_epsd": _r(tk.get("epsd_lambda", 0.0)),
+        "epsd_ablation": tk.get("epsd_ablation", "none"),
+        "model_sha256": model_sha256,
+        "prediction_sha256": prediction_sha256,
+        "normal_loss_ep1": _r(metrics.get("normal_loss_ep1")),
+        "epsd_kl_loss_ep1": _r(metrics.get("epsd_kl_loss_ep1")),
+        "total_loss_ep1": _r(metrics.get("total_loss_ep1")),
+        "normal_loss_final": _r(metrics.get("normal_loss_final")),
+        "epsd_kl_loss_final": _r(metrics.get("epsd_kl_loss_final")),
+        "total_loss_final": _r(metrics.get("total_loss_final")),
     }
+
+    from validate_experiment import validate_run, print_warnings
+    warnings = validate_run(data, p, yn, trm, tem, res, num_classes)
+    if warnings:
+        print_warnings(warnings)
+
+    return res

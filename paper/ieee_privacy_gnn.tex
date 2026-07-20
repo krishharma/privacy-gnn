@@ -17,7 +17,6 @@
 \usepackage{bbm}
 \usepackage{balance}
 \usepackage{placeins}
-\usepackage{url}
 \usetikzlibrary{shapes.geometric, arrows.meta, positioning, fit, backgrounds}
 \def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
     T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
@@ -58,81 +57,46 @@ shaikh.arifuzzaman@unlv.edu}
 \maketitle
 
 \begin{abstract}
-Graph neural networks (GNNs) are emerging in domains such as healthcare, finance, and cyber-physical systems, where graph structure is useful but privacy risk must be measured carefully. This paper studies supervised node-membership inference: given black-box access to a model's output probabilities, an adversary tries to infer whether a node's label was included in the supervised training mask used to optimize the model. To support structure-aware evaluation, we introduce a controlled benchmark that varies graph homophily and edge density independently. We compare GCN and GraphSAGE with feature-only baselines, including logistic regression and MLP, and evaluate predictive utility, calibration, and membership leakage under lightweight score-based attacks: a confidence-feature attack, a true-label threshold attack, and a shadow-model transfer attack. The results show that leakage is not uniformly higher for GNNs. Instead, it depends on graph structure, architecture, feature separability, and posterior behavior. In controlled low-homophily synthetic regimes, GCN leakage rises; in Cora and Citeseer, feature-only baselines can leak more than graph models. Label smoothing often increases attack AUROC, but its calibration effects are dataset-dependent. Edge sparsification, implemented as permanent undirected edge thinning for both training and inference, has mixed effects rather than a universal privacy benefit. Overall, the benchmark supports reproducible evaluation of utility--privacy tradeoffs for supervised node classification under lightweight membership attacks.
+Although graph neural networks (GNNs) are widely used on sensitive data, high classification accuracy does not guarantee the model does not reveal the nodes used during training. In this paper, the authors investigate whether an adversary can learn the membership of the supervised training set from only the node classification probabilities. The authors propose a benchmark that varies the homophily and edge density of synthetic graphs and validates on Cora and Citeseer. For each of the models evaluated, including Graph Convolutional Networks (GCN), GraphSAGE, logistic regression, and multilayer perceptrons (MLPs), the authors compare the results of three black-box attacks on the graphs and evaluate the effectiveness of five lightweight model defenses. The results reveal that GNN model privacy leakage is structure- and model-dependent rather than universal. For the synthetic graphs, GCNs exhibit the highest area under the ROC curve (AUROC) for the attack results under adverse settings ($0.59$ for low homophily and sparse connectivity compared with $\sim 0.51$--$0.53$ for GraphSAGE and the feature-only models). However, the feature-only models reveal more membership information for the nodes in the Cora and Citeseer graphs when the features of the training nodes are highly separable (MLPs exhibit AUROC values of $0.77$--$0.83$ compared with $0.55$--$0.63$ for GCNs). The label smoothing training technique for GNNs can increase the success of the membership inference attacks. None of the evaluated lightweight defenses offer a universal improvement in the privacy of the trained models. Depending on the graph structure and GNN model, the privacy of the training membership must be measured directly for each deployment of the models.
 \end{abstract}
 
 \begin{IEEEkeywords}
-graph neural networks, membership inference, privacy, homophily, graph density, lightweight defenses, calibration, empirical evaluation, shadow models
+graph neural networks, membership inference, privacy, homophily, graph density, lightweight defenses, calibration, shadow models
 \end{IEEEkeywords}
 
 \section{Introduction}
 
-Graph neural networks (GNNs) have drawn attention as a standard approach to learn node-level representations from relational data in domains as diverse as healthcare, finance, and communication networks. In the context of transductive node classification, it is necessary to state the meaning of membership in the ground truth labels. The graph, node features, and edges are available to the GNN message passing process even for the nodes whose labels are to be learned; the membership bit simply asks whether the node's label belongs to the supervised training mask. Membership inference attacks (MIAs) aim to determine whether the membership of training examples in the supervised training set can be inferred from the GNN's output \cite{shokri2017membership}. As node-level representations are learned through message passing in which the nodes' representations are coupled with those of their neighbors in the graph, privacy leakage is also likely to depend on the structure of the graph in which the nodes reside \cite{olatunji2021mia,survey2023gnnprivacy}. Unlike in a typical machine learning problem in which the training examples are assumed to be independent and identically distributed, the nodes in a graph share edges. Consequently, the classical assumption underlying the optimization process that the training examples appear independently in the loss function is violated by the graph structure of the nodes, invalidating some generalization and privacy analyses that are possible for classical machine learning problems.
+Graph Neural Networks (GNNs) have recently been deployed to a variety of relational data in fields as diverse as healthcare, finance, and communications. For instance, patient data from a hospital network could be represented as a graph, and the nodes of this graph could be used to predict the outcome of a given patient based upon that patient's features. While the model might accurately classify the outcome of each of the patients that were part of the training set, that accurate classification does not answer an important question: was it possible for an adversary to determine whether any of those patients were part of the training set based upon the predicted outcomes for each of those patients? This question is known as the membership inference attack (MIA) problem~\cite{shokri2017membership}. The high accuracy of a model does not necessarily answer this question, as it is possible for a model to have high accuracy in its training set while having different prediction scores for the training set relative to the test set of patients~\cite{yeom2018privacy}. Furthermore, due to the structure of GNNs, the answer to the membership inference attack question is not as simple as with traditional machine learning models. For instance, in the scenario of node classification, the graph as a whole is visible to the model during training and inference, but the labels for each of the nodes is used. The structure of the graph, such as the homophily and edge density within the graph, may have an impact upon the privacy of the members of that graph~\cite{olatunji2021mia,survey2023gnnprivacy}.
 
-We introduce an empirical benchmark to answer four research questions. \textbf{RQ1} aims to answer whether graph neural networks are more vulnerable to membership inference attacks than non-graph models with similar feature dimensionality and accuracy. \textbf{RQ2} investigates whether homophily and edge density in graphs impact the success of membership inference attacks, both of which can be controlled during the construction of the graph. \textbf{RQ3} aims to investigate whether any defenses to membership inference attacks can be implemented at the cost of minimal loss in model accuracy. Finally, \textbf{RQ4} seeks to understand the tradeoffs between utility and privacy for each of the models, defenses, and regimes of graphs investigated in this paper. Together, these research questions enable us to not just determine whether membership information of a model is leaked, but also why it is leaked, and what interventions can mitigate that leakage.
+To answer this question, we developed a benchmark that enables evaluation of the impact of these graph structure factors while isolating them from the effects of other factors that may be confounded by the structure of a real world graph. Six different regimes of synthetic graphs were constructed that differed in their homophily and edge density, and models were trained on each of the graphs using both GNNs and non-graph models. Furthermore, five different lightweight defenses were applied to the training of the models, and the utility and privacy of those models were evaluated using three different black-box attacks. All experiments were performed according to a YAML configuration file, and each experiment was performed five times with randomly chosen seeds. Four research questions guided the study: does the GNN leak more than a model that does not use the graph structure of the data (RQ1)? Does the homophily and edge density of the graph impact the leakage of information about its members (RQ2)? Do the lightweight defenses mitigate the information leakage (RQ3)? Is there a utility-privacy tradeoff for these models (RQ4)?
 
-\textbf{Contributions.} We present a framework for conducting experiments using YAML files. We conduct experiments on two-layer graph convolutional networks and GraphSAGE using logistic regression and multilayer perceptron as baselines on six synthetic datasets as well as Cora and Citeseer. For the experiments we use three attack methods based on scores with well-defined score features as well as five defenses with fixed hyperparameters. For each experiment we report the mean and standard deviation of the results across multiple random seeds, perform significance tests on the results to examine whether the differences between the results are statistically significant, and report the expected calibration error as a measure of the calibration of the models. Our results include findings on the structure and model-dependent nature of the risk of membership in supervised learning models, the failure modes of label smoothing as a means of achieving privacy, and the impact of permanent edge sparsification that is setting-dependent rather than universal in its privacy benefits. Additionally, we provide detailed descriptions of the methods used in the paper including the way in which the data was generated, how the data was split into training, validation, and test sets, and the steps that were taken to ensure the reproducibility of the results.
+\textbf{Contributions.} We release a YAML-driven experiment framework that automates the sweep of datasets, models, defenses, and seeds. We compare GCN and GraphSAGE to feature-only baselines on both synthetic and citation datasets. We evaluate three attack families and five defenses with the same hyperparameters over five different seeds. Section~II reviews the related work. Section~III defines the threat model and evaluation metrics. Section~IV describes the benchmarking process step by step. Section~V presents the results to address each research question. Finally, Sections~VI--VII interpret the results and offer our conclusions.
 
-By isolating factors that are normally confounded in a single real-world graph, such benchmark graphs enable us to study the effect of each of these factors in isolation. Each of these findings is thus limited to the settings of our generator family; further experiments on real-world graphs are required to establish the external validity of these findings, but such experiments are enabled by our codebase and citation-network loaders.
-
-Evaluation metrics combine predictive utility (accuracy, macro F1, macro AUROC), probabilistic calibration \eqref{eq:ece}, and three membership-risk summaries aligned with prior literature \cite{shokri2017membership,salem2019mlleaks,nasr2019comprehensive}. Reporting calibration alongside attacks is critical because many defenses reshape posteriors without reducing distinguishability under membership tests \cite{yeom2018privacy,guo2017calibration}.
-
-\section{Related Work}
+\section{Background and Related Work}
 
 \subsection{Membership inference on classical models}
-Foundational work used shadow models and attack classifiers based on statistics of the model's outputs \cite{shokri2017membership}. Subsequent work relaxed assumptions about the knowledge of the model's architecture and the distribution of its training data \cite{salem2019mlleaks}. Theoretical work investigated the relationship between the advantage of membership inference attacks and concepts related to the model's generalization and loss functions \cite{yeom2018privacy}. Subsequent work considered the case where the attacker has access to the model's architecture and training data \cite{nasr2019comprehensive,song2017memorization}. More recent work considers evaluating the attacks at a given false positive rate \cite{carlini2022membership}. We evaluate the attacks using the area under the ROC curve, though we plan to utilize stricter metrics in future work.
+Membership inference in classical machine learning models aims to determine whether a given data point was part of the model's training set, using only the model's outputs~\cite{shokri2017membership}. Most existing methods train shadow models using data similar to the training data of the target model, then train a classifier that can recognize if the target model is classifying the given sample as a member of the training set. Many methods train these models without having to make assumptions about the model's architecture, or the distribution of the training data~\cite{salem2019mlleaks}. Most theoretical work considers that one possible reason that a model will exhibit a membership inference advantage is that it memorized the training data samples, resulting in higher classification confidence with training samples than with similar non-training samples~\cite{yeom2018privacy}. More recent developments suggest that evaluating the methods using a target false-positive rate instead of accuracy may be more appropriate to represent the model's security~\cite{carlini2022membership}. We use the area under the receiver operating characteristic (AUROC) curve for the attack results as a scalar metric to evaluate the security of the model; this value is the probability that a randomly sampled training member will be classified as a training member by the attack model with a higher score than a randomly sampled nonmember, and takes a value between 0 and 1 (a value of 0.5 indicates random guessing).
 
 \subsection{Membership inference on graphs}
-The study of node-level membership inference for GNNs reveals insights from both posterior-based and shadow-model attackers \cite{olatunji2021mia}. For the graph-level setting, different drivers of model leakage have been identified \cite{wu2021mia}. Furthermore, surveys of the literature have categorized graph neural network attacks according to their purpose, grouping attacks like membership inference with model reconstruction and attribute inference \cite{survey2023gnnprivacy}. Related work on graph privacy further motivates the study of membership inference for graph neural networks \cite{duddu2020quantifying,hay2008resisting}.
+The problem of determining whether a graph sample was part of the training set of a GNN has been studied~\cite{olatunji2021mia}. Furthermore, while graph classification problems are distinct from node classification problems in that the examples are subgraphs rather than graphs~\cite{wu2021mia}, there have been surveys of the attacks that can be performed on GNNs, including membership inference~\cite{survey2023gnnprivacy,duddu2020quantifying,hay2008resisting}. These attacks are generally restricted to node-level attacks that are score-based and black-box in nature.
 
 \subsection{Architectures and lightweight defenses}
-Graph convolution \cite{kipf2017gcn} and neighborhood aggregation in GraphSAGE \cite{hamilton2017graphsage} define our hypothesis classes, with broader GNN context from graph attention and expressivity analyses \cite{velivckovic2018gat,xu2019gin}. DropEdge \cite{rong2020dropedge} perturbs topology during training. Output-centric defenses interact with label-only adversaries \cite{choquette2021labelonly}. Differential privacy for GNNs provides rigorous guarantees with higher complexity \cite{sajadmanesh2023gap}; our non-DP baselines should therefore be interpreted relative to the wider DP literature \cite{dwork2006dp,abadi2016deepdp,mironov2017rdp}.
+Among the most common models for GNNs are graph convolutional networks (GCNs)~\cite{kipf2017gcn}. GraphSAGE is a different model that samples neighbors of a node differently from GCNs~\cite{hamilton2017graphsage}. DropEdge is another model that randomly removes edges of a graph during training to regularize the learning process~\cite{rong2020dropedge}. Some defenses to membership inference that have been proposed are based on masking the model's output, such as masking the model's output according to its confidence in the predictions~\cite{choquette2021labelonly}. There are also differentially private versions of GNNs such as DP-GCNs~\cite{sajadmanesh2023gap,dwork2006dp,abadi2016deepdp,mironov2017rdp}. However, the majority of lightweight defenses that have been published are not differentially private; hence, the study of these methods is independent of differentially private methods.
 
-\section{Preliminary Concepts for Privacy-Oriented Graph Learning}
+\subsection{Homophily and graph structure}
+One possible attribute of a graph that may relate to membership inference is the concept of homophily: the idea that graphs tend to have edges between nodes that have the same class label. In social networks, for instance, individuals with similar interests will have social network connections to each other. In contrast, low homophily results in connections between nodes of different classes. In models like GCNs, the propagation of information between nodes can act as a low-pass filter for information, removing information that differs between neighbors~\cite{kipf2017gcn,zhu2020beyondhomophily}. Because membership inference considers the similarity of predictions between nodes, the structure of the graph in which nodes are coupled in training can lead to privacy issues: two different models can exhibit similar accuracy on the training data, but have different results in terms of classification confidence for training data versus nontraining data samples.
 
-\subsection{Homophily, heterophily, and learning difficulty}
-Homophily is a factor that describes how likely it is for edges to connect nodes that have the same class label. High levels of homophily are seen in examples such as social networks or citation networks, where nodes with the same labels tend to be connected by edges. Heterophily represents the opposite of this concept, where edges tend to exist between nodes with different class labels, leading to issues in models like the Graph Convolutional Network (GCN) that act as low-pass filters for those networks \cite{kipf2017gcn}. The graph generator that we propose allows for a tradeoff between the number of edges that connect nodes with the same labels versus those with different labels, which ensures that the homophily among the generated graphs is within the target range (Section~\ref{sec:datasets}). Thus, this concept allows for the separation of these factors from model capacity in ways that a single graph and its associated learning problem does not permit.
+\subsection{Research gap}
+Most related work suggests that GNNs can leak membership information. However, in a single real-world GNN example, there are multiple factors to consider: the homophily of the graph, the density of the graph, the separability of the features of the training data, and the GNN architecture. In experiments using the Cora dataset, for example, it is difficult to determine if the model leaks membership information due to the structure of the graph or the bag-of-words features of the training data. In our work, we consider different synthetic graphs with various levels of homophily and density but with the same dimensionality of features. We train various GNNs on these graphs and compare the performance of the models to feature-only baselines subjected to the same membership inference attacks, as well as compare the performance of various lightweight defenses against each other on these graphs.
 
-\subsection{Membership inference in the graph setting}
-Membership inference with respect to the graph learning problem can refer to several different concepts altogether: whether the node exists in the graph, whether its features and edges are accessible, whether its label is used for supervised learning, and whether it contributes to the message passing steps of the graph learning algorithm \cite{olatunji2021mia}. More specifically, membership with respect to the graph is defined as the requirement that the node belongs to the training mask $\mathcal{T}$ and that its label is utilized for the calculation of the supervised learning loss function. Unlike in settings where IID data is used, the loss of one node in the graph impacts the loss of other nodes that are connected to it through edges. Thus, high accuracy on the graph may be achieved with poor membership privacy, indicating that the model is essentially memorizing the training dataset rather than learning how to generalize to new nodes \cite{yeom2018privacy}. The different masks $(\mathcal{T},\mathcal{S})$ are varied in our study to maintain membership to the training set while performing semi-supervised learning.
+\section{Problem Setup}
+\label{sec:setup}
 
-Intuitively, the attacker is attempting to determine whether the model and its associated loss function have high confidence in the membership of a node to the training set $\mathcal{T}$, rather than attempting to recover the labels or edges of the graph. The confidence of the model can be measured in various ways that consider both the features of a node and the features of the nodes that are connected to it. Thus, two models that exhibit similar accuracies on supervised learning tasks can differ in the degree to which their training process led to the leakage of membership information.
+\subsection{Threat model in plain terms}
+Suppose a node classifier is deployed in practice and returns a probability vector for each queried node. The adversary knows the label of the node under consideration and wants to know whether this label was used during the training of the model. The adversary has black-box access to the model; that is, the adversary can only observe the probability vectors returned by the classifier~\cite{olatunji2021mia}. The adversary will be successful in their attempt if the classifier can distinguish between nodes that were used during training and nodes that were held out during training using a simple classifier.
 
-\subsection{Factorial structure of the benchmark}
-We adopt a full factorial skeleton over datasets $\times$ models $\times$ defenses $\times$ random seeds, implemented declaratively so that omitting or adding a dataset requires configuration edits only. Graph models exhaust all defense toggles; non-graph models repeat the no-defense condition. Table~\ref{tab:factorial} summarizes cardinalities. This design supports additive interpretations of main effects (e.g., homophily level) conditional on architecture, although interactions between structure and architecture are expected \textit{a priori}.
-
-\begin{table}[!t]
-\caption{Factors in the configuration-driven experiment grid (YAML). Cardinality is the Cartesian product subject to baseline constraints (feature-only models only train under no defense).}
-\label{tab:factorial}
-\centering
-\small
-\begin{tabular}{@{}lc@{}}
-\toprule
-\textbf{Factor} & \textbf{Levels} \\
-\midrule
-Synthetic regimes & 6 \\
-Citation graphs (when enabled) & 2 \\
-Model families & 4 (LogReg, MLP, GCN, GraphSAGE) \\
-GNN defenses & 6 (none + five mechanisms) \\
-Baseline defenses & 1 (none) \\
-Seeds $|\mathcal{S}|$ & 5 \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-\section{Notation and Graph Learning Preliminaries}
-
-Let $G=(V,E)$ be an undirected graph with $|V|=n$ nodes. We encode edges by a symmetric adjacency matrix $A \in \{0,1\}^{n \times n}$ or equivalently an edge index tensor listing endpoints row-wise for both directions. Node features are $X \in \mathbb{R}^{n \times d}$ and integer labels $y \in \{0,\ldots,C-1\}^n$. For message passing we use degree matrix $D_{ii}=\sum_j A_{ij}$ and normalized propagation $\tilde{A}=D^{-1/2} A D^{-1/2}$ for graph convolutional layers as in Kipf and Welling \cite{kipf2017gcn}.
-
-A two-layer graph convolutional network (GCN) computes
-\begin{equation}
-H^{(1)} = \sigma\left(\tilde{A} X W^{(0)}\right), \quad
-Z = \tilde{A} H^{(1)} W^{(1)},
-\label{eq:gcn}
-\end{equation}
-where $\sigma$ is ReLU applied row-wise, dropout acts on $H^{(1)}$ during training, and rows of $Z$ are logits. For GraphSAGE with mean aggregation (two layers), each layer applies a learned affine map after neighborhood mean pooling over one-hop neighbors \cite{hamilton2017graphsage}; we denote final logits likewise by $Z$. Baseline models ignore $A$ and map $X$ directly to logits.
-
-Training masks $m_{\mathrm{tr}}, m_{\mathrm{te}} \in \{0,1\}^n$ satisfy $m_{\mathrm{tr}}+m_{\mathrm{te}}=\mathbf{1}$ entrywise on synthetic benchmarks with a $50/50$ split unless stated otherwise. Softmax probabilities are $\hat{p}_v = \mathrm{softmax}(z_v)$.
+\subsection{Membership predicate and notation}
+Let $G = (V, E)$ be an undirected graph with $n$ nodes, each having a $d$-dimensional feature vector and a label from the set $\{0, \ldots, C - 1\}$. Let the training mask $\mathcal{T} \subseteq V$ be the set of nodes whose labels appear in the supervised loss, and let the held-out set $\mathcal{S} \subseteq V$ be the set of nodes whose labels are not in $\mathcal{T}$. The sets $\mathcal{T}$ and $\mathcal{S}$ are subsets of the nodes in $G$; all nodes participate in the propagation of messages during training. Thus, membership in $\mathcal{T}$ or $\mathcal{S}$ is a problem in transductive semi-supervised learning. Given the graph $G$, the feature matrix $X$, the label vector $y$, and the training and held-out sets $\mathcal{T}$ and $\mathcal{S}$, the goal is to determine if a given query node $v$ is a member of $\mathcal{T}$ or $\mathcal{S}$, using only the softmax probability vector $\hat{p}_v$ and the label $y_v$ of that node. Table~\ref{tab:not} summarizes the notation used throughout the paper. The success of the attacks is summarized by the attack AUROC. An AUROC of 0.5 means that the attack has no advantage in determining whether a given node is a member of the training set $\mathcal{T}$ or the held-out set $\mathcal{S}$; an AUROC closer to 1.0 indicates a higher success rate in distinguishing between members and non-members. Thus, a higher attack AUROC value indicates higher privacy risk; this is the opposite of the utility metrics, where higher is better. Consequently, both utility and privacy metrics must be jointly considered in the evaluation of a model.
 
 \begin{table}[!t]
 \caption{Primary notation used throughout.}
@@ -144,7 +108,6 @@ Training masks $m_{\mathrm{tr}}, m_{\mathrm{te}} \in \{0,1\}^n$ satisfy $m_{\mat
 \textbf{Symbol} & \textbf{Meaning} \\
 \midrule
 $n$, $d$, $C$ & Nodes, feature dimension, classes \\
-$A$, $\tilde{A}$ & Adjacency and normalized propagation \\
 $X$, $y$ & Feature matrix and label vector \\
 $z_v$, $\hat{p}_v$ & Logits and softmax probabilities at $v$ \\
 $\mathcal{T}$, $\mathcal{S}$ & Supervised training-mask and held-out node sets \\
@@ -156,40 +119,78 @@ $\alpha$, $r_{\mathrm{de}}$, $r_{\mathrm{es}}$ & Smoothing, DropEdge, sparsifica
 \end{tabular}
 \end{table}
 
-\section{Threat Model and Privacy Goal}
-
-\subsection{Adversary capabilities}
-We assume a \emph{black-box} adversary who may submit nodes $v \in V$ and receives $\hat{p}_v \in \mathbb{R}^C$, the model's predicted probability vector after softmax. This oracle abstracts deployed APIs that expose confidence scores or calibrated probabilities. The adversary knows which label $y_v$ is under evaluation (standard for node-level membership games \cite{olatunji2021mia}) and may compute derived scalars from $\hat{p}_v$. We do \emph{not} grant access to intermediate embeddings, gradients, or parameters $\theta$.
-
-Our threat model is grounded in how graph models are often served in production: clients may receive probability vectors or confidence-ranked outputs even when the implementation is opaque. By restricting the adversary to black-box access to these outputs, we estimate leakage under service-realistic conditions.
-
-\subsection{Membership experiment}
-Let $\mathcal{T} \subseteq V$ denote nodes whose labels are used in the supervised training loss and let $\mathcal{S} \subseteq V$ denote held-out nodes with $\mathcal{T} \cap \mathcal{S} = \emptyset$. The nodes in both sets may still exist in the transductive graph and may participate in message passing. For a query $v$, membership inference seeks to distinguish $v \in \mathcal{T}$ versus $v \in \mathcal{S}$ using only $\hat{p}_v$ and $y_v$. We summarize distinguishability by attack area under the ROC curve (AUROC) and attack accuracy; AUROC $=0.5$ corresponds to chance under this scalar summary.
-
-In all reported plots, ``higher privacy risk'' corresponds to \emph{higher} attack AUROC. This directional convention is critical for interpretation because utility metrics move in the opposite direction (higher is better), making joint utility--privacy analysis inherently bi-objective.
-
 \begin{remark}
-Our evaluation is \emph{transductive} on a fixed graph: the same $G$ supports training and inference masks. This matches common semi-supervised node classification setups and should not be interpreted as full graph-inclusion membership. MIAs remain non-trivial because posteriors on supervised versus held-out nodes need not be exchangeable under message passing.
+The evaluations described in this paper are performed in the transductive setting, wherein the training and held-out sets are subsets of the same graph $G$. Consequently, the privacy attack setting is slightly weaker than if the model were hidden from the existence of entire sets of nodes in the graph; however, the privacy of members and non-members may still differ within the graph $G$ due to the message-passing process. Consequently, the attacks described in this paper do not consider white-box models and attacks on model embeddings or gradients, structure-modification attacks, or federated machine learning models~\cite{survey2023gnnprivacy}. While these attack settings are important to consider in evaluating privacy in deep learning models, they are beyond the scope of this paper.
 \end{remark}
 
-\subsection{Threat-model variants outside scope}
-Our benchmark deliberately targets score-based black-box membership inference. We do not evaluate white-box MIAs over embeddings or gradients, structure-modification attacks, or federated graph-learning threat models \cite{survey2023gnnprivacy}. These settings are important extensions but require different access assumptions and evaluation protocols than the API-style probability-access setting studied here.
+\subsection{Evaluation metrics}
+For each experiment, three families of metrics are reported. For each value of the utility metrics (defined below), the value is reported for both the training set and the held-out set of nodes. The utility metrics evaluate whether the membership attack impacts the utility of the model; higher values are better. For the privacy metrics, a higher attack AUROC indicates higher membership distinguishability, indicating that the model leaks information about the membership of the nodes in the training and held-out sets. Thus, for the privacy metrics, lower is better. The metrics reported in this paper are as follows:
 
-\section{Datasets and Synthetic Generation Protocol}
+\textbf{Utility metrics.} The utility of the model is evaluated using accuracy, macro F1, and macro classification AUROC on the held-out set of nodes. A higher value of accuracy means that fewer nodes are incorrectly classified by the model. Similarly, higher F1 scores indicate better performance by the model. Higher AUROC values mean that the model has better distinguishing capabilities between the different classes of labels.
+
+\textbf{Privacy metrics.} The primary privacy metric is the confidence-attack AUROC, defined in Section~\ref{sec:attacks}. Additionally, a threshold attack and a shadow-model attack are also performed to provide additional evaluation of the privacy of the model.
+
+\section{Benchmark Design and Methodology}
+\label{sec:benchmark}
+
+\subsection{Overview}
+Fig.~\ref{fig:pipeline} illustrates the end-to-end process followed for each experiment. Briefly, a graph is loaded or generated. A target model is trained on the graph (possibly with the use of a defense strategy). Posteriors are extracted from the model's predictions for the training and test nodes. A shadow model is trained on the training data. Finally, the membership models are evaluated for various metrics. Table~\ref{tab:factorial} lists the factorial design of the experiment as implemented within the file \texttt{experiment\_config\_paper.yaml}. Each subsection that follows describes each of the components of the experiments in the order in which they are executed for any given experiment.
+
+\begin{figure}[!t]
+\centering
+\resizebox{\linewidth}{!}{%
+\begin{tikzpicture}[
+  font=\footnotesize\sffamily,
+  node distance=6mm and 8mm,
+  box/.style={draw, rounded corners=2pt, minimum width=2.8cm, minimum height=8mm, align=center},
+  arr/.style={-{Stealth[length=2mm]}, thick},
+]
+\node[box] (d) {Dataset + split\\\footnotesize(synthetic or citation)};
+\node[box, right=of d] (t) {Train target model\\\footnotesize(defense optional)};
+\node[box, right=of t] (p) {Posteriors on\\\footnotesize train and test nodes};
+\node[box, below=of d] (s) {Train shadow model\\\footnotesize(disjoint seed or split)};
+\node[box, below=of t] (a) {Attack models\\\footnotesize(conf.\ / thresh.\ / shadow)};
+\node[box, below=of p] (m) {Utility + calibration\\\footnotesize+ privacy metrics};
+\draw[arr] (d) -- (t);
+\draw[arr] (t) -- (p);
+\draw[arr] (d) -- (s);
+\draw[arr] (p) -- (a);
+\draw[arr] (s) -- (a);
+\draw[arr] (a) -- (m);
+\end{tikzpicture}
+}
+\caption{End-to-end benchmark: target training, posterior extraction, shadow training, attack evaluation, and reporting.}
+\label{fig:pipeline}
+\end{figure}
+
+\begin{table}[!t]
+\caption{Factors in the configuration-driven experiment grid (YAML). Cardinality is the Cartesian product subject to baseline constraints (feature-only models only train under no defense).}
+\label{tab:factorial}
+\centering
+\footnotesize
+\setlength{\tabcolsep}{2.5pt}
+\begin{tabular}{@{}>{\raggedright\arraybackslash}p{0.34\columnwidth} >{\raggedright\arraybackslash}p{0.60\columnwidth}@{}}
+\toprule
+\textbf{Factor} & \textbf{Levels} \\
+\midrule
+Synthetic regimes & 6 \\
+Citation graphs & 2 (Cora, Citeseer) \\
+Model families & 4 (LogReg, MLP, GCN, GraphSAGE) \\
+GNN defenses & 6 (none + five mechanisms) \\
+Baseline defenses & 1 (none) \\
+Seeds $|\mathcal{S}|$ & 5 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Datasets}
 \label{sec:datasets}
 
-\subsection{Design rationale}
-To isolate homophily and density we generate synthetic graphs with fixed $(n,d,C)$ while systematically varying (i) the fraction of edges connecting same-label endpoints and (ii) the total edge budget relative to the complete graph \cite{survey2023gnnprivacy}. Observed homophily after generation is reported as
-\begin{equation}
-h(G) = \frac{1}{|E|}\sum_{(i,j)\in E} \mathbbm{1}\{y_i = y_j\},
-\end{equation}
-and undirected density as $|E|/\binom{n}{2}$.
+Many properties of real world graphs are simultaneously present. These properties include homophily, density, the types of features of the nodes, and the structure of the communities within those graphs. Thus, we begin our experiments with synthetic graphs in which we can control homophily and density independently, and then extend to citation graph benchmarks.
 
-\subsection{Procedural specification}
-For each seed, labels are sampled uniformly over classes. Class means $\mu_c \in \mathbb{R}^d$ are drawn once per graph; node features are $x_v = \mu_{y_v} + \epsilon_v$ with $\epsilon_v \sim \mathcal{N}(0, \sigma^2 I)$ and fixed $\sigma$. Target edge counts scale as $\rho \binom{n}{2}$ with $\rho \in \{0.005, 0.015, 0.04\}$ for sparse, medium, and dense regimes at $n{=}400$, yielding approximately \num{400}, \num{1200}, and \num{3200} undirected edges before deduplication effects. A prescribed fraction of edges is allocated to within-class pairs versus cross-class pairs to target low homophily ($\approx 0.3$) or high homophily ($\approx 0.8$). Table~\ref{tab:synth} summarizes; Table~\ref{tab:edgebudget} gives approximate realized scales. Fig.~\ref{fig:synthgen} provides a block diagram of the generator aligned with the implementation: stochastic labels induce clustered features; edge loops enforce $\rho$ and $h_{\mathrm{tgt}}$; masks finalize the semi-supervised dataset object consumed by trainers.
+\textbf{Synthetic generator.} Each synthetic graph has $n{=}400$ nodes, $d{=}50$ features, and $C{=}5$ classes. Labels are sampled uniformly. Features are drawn from class-specific Gaussian clusters: each class has a center $\mu_c$, and node features are $x_v = \mu_{y_v} + \epsilon_v$ with small noise $\epsilon_v$. This yields separable but noisy features, similar in spirit to a simple planted-cluster model.
 
-\subsection{Edge-sampling implementation details}
-Let $N_{\mathrm{tgt}}(\rho)=\lfloor \rho\, n(n-1)/2 \rfloor$ be the undirected edge budget. We allocate $\lfloor h_{\mathrm{tgt}} N_{\mathrm{tgt}}\rfloor$ edges to within-class proposals and the remainder to cross-class proposals, where $h_{\mathrm{tgt}}\in\{0.3,0.8\}$. Candidate pairs $(i,j)$ are sampled under label constraints, duplicates are rejected with a hash set, and accepted pairs are inserted in both orientations for PyG edge-index compatibility. If no edge survives proposal caps, we inject a minimal two-node edge to avoid degenerate empty-graph tensors. Because rejection sampling enforces uniqueness, realized $h(G)$ and density can deviate slightly from targets and are therefore measured and reported per run.
+Edges are generated to reach the two targets simultaneously. The density of the generated graphs is controlled by the parameter $\rho$, which takes on the values of $\{0.005, 0.015, 0.04\}$. Such a parameter controls the fraction of possible edges that are created between nodes in the graph; at a constant number of nodes $n = 400$, this means that the number of edges in the graphs ranges from approximately 400 (sparse) to 3200 (dense). The homophily target $h_{\mathrm{tgt}} \in \{0.3, 0.8\}$ controls the fraction of edges that connect nodes of the same label to nodes of the same label. After the graph is generated, the measured homophily for that instance of the generated graph is $h(G) = |E|^{-1} \sum_{(i,j)\in E} \mathbbm{1}\{y_i = y_j\}$. This value may not exactly equal the targeted value due to the rejection sampling process that was applied to generate the graph. A combination of the crossing homophily and density regimes creates the six named regimes in Table~\ref{tab:regimes}. Fig.~\ref{fig:synthgen} presents the different stages of the process that was described above. For each randomly selected seed, the graph is resampled with respect to the node labels, features, graph edges, and the training-test split of the nodes. The pseudocode for resampling the edges is listed in Appendix~\ref{app:edgesampling}.
 
 \begin{table}[!t]
 \caption{Synthetic graph generator: fixed and varied factors.}
@@ -210,7 +211,7 @@ Split & 50\% train / 50\% test & Resampled per seed \\
 \end{table}
 
 \begin{table}[!t]
-\caption{Approximate undirected edge budget by density at $n=400$ (before duplicate rejection).}
+\caption{Approximate undirected edge budget by density at $n=400$.}
 \label{tab:edgebudget}
 \centering
 \begin{tabular}{@{}lcc@{}}
@@ -225,7 +226,7 @@ Dense & 0.040 & $\sim 3200$ \\
 \end{table}
 
 \begin{table*}[!t]
-\caption{Synthetic evaluation regimes: naming convention, structural targets, and graph-scale statistics at $n{=}400$ (undirected). Observed $h(G)$ and $|E|$ vary slightly per seed due to rejection sampling; typical ranges align with target bands.}
+\caption{Synthetic evaluation regimes at $n{=}400$ (undirected). Observed $h(G)$ and $|E|$ vary slightly per seed.}
 \label{tab:regimes}
 \centering
 \footnotesize
@@ -239,8 +240,6 @@ Dense & 0.040 & $\sim 3200$ \\
 \texttt{synthetic\_low\_sparse} & low ($\sim 0.3$) & 0.005 & $\sim 400$ & Sparse heterophilic \\
 \texttt{synthetic\_low\_medium} & low & 0.015 & $\sim 1200$ & Medium heterophilic \\
 \texttt{synthetic\_low\_dense} & low & 0.040 & $\sim 3200$ & Dense heterophilic \\
-\midrule
-\multicolumn{5}{l}{\emph{Common to all:} $d{=}50$, $C{=}5$, labels sampled iid uniformly, Gaussian blob features.} \\
 \bottomrule
 \end{tabular}
 \end{table*}
@@ -269,11 +268,10 @@ Dense & 0.040 & $\sim 3200$ \\
 \label{fig:synthgen}
 \end{figure*}
 
-\subsection{Citation benchmarks}
-Planetoid Cora and Citeseer statistics appear in Table~\ref{tab:planetoid}. We evaluate Cora and Citeseer with the same model, attack, defense, and seed protocol, while using them as real citation benchmarks rather than controlled structural regimes (see Figs.~\ref{fig:overview} and~\ref{fig:citationpanel}).
+\textbf{Citation benchmarks.} For the experiment on the Cora and Citeseer graphs (Table~\ref{tab:planetoid}), we use the same model, attack, and defense methods that were used for the synthetic graphs. However, for those graphs, we resample the training and test splits of the nodes to ensure that each randomly selected seed has a randomly selected training and test split. This ensures that the same membership predicate is used as for the synthetic graphs: nodes are split 50/50 between training and test splits, and all nodes are members of the graph during the training process.
 
 \begin{table}[!t]
-\caption{Planetoid datasets available in the implementation.}
+\caption{Planetoid citation benchmarks.}
 \label{tab:planetoid}
 \centering
 \small
@@ -287,116 +285,61 @@ Citeseer & 3,327 & 4,732 & 3,703 & 6 \\
 \end{tabular}
 \end{table}
 
-\section{Predictive Models}
+\subsection{Predictive models}
 \label{sec:models}
 
-This section specifies every hypothesis class used in RQ1--RQ4. Baselines intentionally \emph{ignore} adjacency so that differences in membership leakage isolate graph-dependent mechanisms versus feature-only overfitting.
+We compare two models based on graph networks with two baselines that do not consider the adjacency matrix at all. The goal is to remove any possible influence of the GNN on the results to ensure that any extra leakage that occurs beyond the feature-only models is indeed due to the GNN.
 
-\subsection{Multinomial logistic regression}
-Multinomial logistic regression implements a linear softmax classifier directly on the node features. Specifically, given learned parameters $W \in \mathbb{R}^{C \times d}$ and $b \in \mathbb{R}^{C}$, the model computes the softmax transform $\hat{p}_v = \mathrm{softmax}(W x_v + b)$ over the node features $x_v$. Training minimizes the empirical cross-entropy loss $\mathcal{L}_{\mathrm{LR}} = -\sum_{v \in \mathcal{T}} \log \hat{p}_{v,y_v}$ without an $\ell_2$ penalty term in the objective function beyond the defaults for the optimization solver. The solver uses either L-BFGS-B or coordinate descent, depending on the dimensionality of the feature space, as implemented in the scikit-learn library with tightened convergence tolerances.
+\textbf{Logistic regression} is a model that applies a softmax classifier directly to the features of each node in the network, $x_v$. This model will help to determine if the features alone introduce any leakage of membership information.
 
-\textbf{Role in the study.} Since logistic regression is a convex model with a readily interpretable parameterization, its AUROC provides a baseline against which to compare the performance of the GCN. If the AUROC for the attacked model is substantially higher for a logistic regression model than for the GCN, it indicates that even without the use of message passing and nonlinear transformation of the node features, the model still exhibits a membership signal. Therefore, the performance of the GCN can be evaluated in relation to this baseline result.
+\textbf{Multilayer perceptrons (MLP)} add hidden layers of nodes on top of the features but ignore the adjacency matrix. Adding hidden layers allows the model to learn more complex relationships between the features.
 
-\subsection{Multilayer perceptron}
-The multilayer perceptron (MLP) applies compositional nonlinearities to node features while still discarding $A$. Hidden representations follow
+\textbf{Graph convolutional network (GCN)} takes into account both the features of each node and those of its neighbors in the graph via the adjacency matrix~\cite{kipf2017gcn}. The graph is transformed using $\tilde{A}=D^{-1/2}AD^{-1/2}$~\cite{kipf2017gcn}. Each layer of the graph convolutional network calculates~\cite{kipf2017gcn}
 \begin{equation}
-\begin{aligned}
-h_v^{(1)} &= \mathrm{ReLU}(W^{(1)} x_v + b^{(1)}), \\
-h_v^{(2)} &= \mathrm{ReLU}(W^{(2)} h_v^{(1)} + b^{(2)}), \\
-z_v &= W^{(3)} h_v^{(2)} + b^{(3)} .
-\end{aligned}
+H^{(1)} = \sigma\left(\tilde{A} X W^{(0)}\right), \quad
+Z = \tilde{A} H^{(1)} W^{(1)},
+\label{eq:gcn}
 \end{equation}
-with hidden widths $64$ and $32$, matching the GCN hidden width in the first layer for rough parameter-count comparability. Training minimizes the same cross-entropy on $\mathcal{T}$ using backpropagation as implemented in scikit-learn's MLPClassifier.
+The activation function is the rectified linear unit (ReLU) activation function and dropout with rate 0.5 is included in the calculation of $H^{(1)}$. The weight matrices are $W^{(0)} \in \mathbb{R}^{d \times 64}$, $W^{(1)} \in \mathbb{R}^{64 \times C}$. Each of these calculations is performed to mix the features of each node with the features of its neighbors to allow for the influence of the graph structure to be included in the predictive model.
 
-\textbf{Role in the study.} The MLP tests whether deeper nonlinear feature extraction---without structure---recovers the qualitative leakage trends of GCNs. If GCN AUROC greatly exceeds MLP AUROC under heterophily, graph propagation likely contributes memorization-like confidence gaps beyond universal approximation on $X$ alone.
+\textbf{GraphSAGE} is another model that uses two layers but uses mean pooling to aggregate information from the neighbors of each node rather than using the spectral graph convolution used by GCNs~\cite{hamilton2017graphsage}. This model has been shown to be more robust when the neighboring nodes have different classes than each other. All of the models are trained using the Adam optimizer to minimize the cross-entropy loss only on the training set $\mathcal{T}$.
 
-\subsection{Graph convolutional network}
-We instantiate the spectral message-passing stack in \eqref{eq:gcn}, with standard self-loop normalization as implemented by PyTorch Geometric's \texttt{GCNConv}. Each row of $H^{(1)}$ mixes a node's features with those of its neighbors via $\tilde{A}$, encouraging representations to agree along edges; the second layer repeats mixing on intermediate activations. Dropout with probability $0.5$ is applied to $H^{(1)}$ during training. Weight matrices have shapes $W^{(0)} \in \mathbb{R}^{d \times 64}$ and $W^{(1)} \in \mathbb{R}^{64 \times C}$. Parameters are learned with Adam on the node-level cross-entropy restricted to training masks.
-
-\textbf{Inductive capacity and privacy.} Full-batch GCN is transductive on $G$: parameters interact with the entire adjacency during training. Consequently, memorizing localized topology quirks can sharpen posteriors on training nodes relative to held-out nodes even under modest global accuracy gaps---precisely the asymmetry membership attackers exploit \cite{yeom2018privacy}. Defenses in Section~\ref{sec:defenses} perturb optimization paths through $A$ or labels without necessarily shrinking parameter norms.
-
-\subsection{GraphSAGE with mean pooling}
-GraphSAGE learns differentiable aggregation functions over neighborhoods \cite{hamilton2017graphsage}. With mean pooling, each layer computes neighbor averages of transformed features before concatenation or summation with self-features depending on operator variants; our PyTorch Geometric implementation uses the GraphSAGE convolution operator with mean aggregation in full-batch mode so every neighbor participates without subsampling.
-
-\textbf{Contrast with GCN.} Whereas spectral GCN layers correspond to polynomial filters on the normalized adjacency, GraphSAGE's aggregation is parameterized distinctly per layer; empirical studies often report improved robustness under heterophily when paired with appropriate filters. In our benchmark, GraphSAGE maintains competitive accuracy with materially different AUROC than GCN on several low-homophily regimes, motivating architecture-aware privacy decisions rather than treating ``GNN'' as monolithic.
-
-\section{Membership Inference Attacks}
+\subsection{Membership inference attacks}
 \label{sec:attacks}
 
-\subsection{Score features and attack input representation}
-Given probability vector $\hat{p}_v$ and true label $y_v$, we form a fixed, four-dimensional vector $\phi(\hat{p}_v,y_v) \in \mathbb{R}^4$ shared across all attack families below:
-\begin{align}
-\phi_1 &= \max_c \hat{p}_{v,c}, \\
-\phi_2 &= \hat{p}_{v,y_v}, \\
-\phi_3 &= -\sum_{c=1}^{C} \hat{p}_{v,c}\log(\hat{p}_{v,c}+\varepsilon), \\
-\phi_4 &= -(1-\phi_1)\log(\phi_1+\varepsilon),
-\end{align}
-with small $\varepsilon$ for numerical stability. Here $\phi_1$ captures peak confidence, $\phi_2$ the model's assigned probability to the \emph{true} class (often elevated for training points under overfitting), $\phi_3$ is Shannon entropy of the predictive distribution, and $\phi_4$ supplies a margin-style transform that correlates with certainty when mass concentrates on a single class \cite{salem2019mlleaks}. Restricting to four coordinates keeps the attack lightweight and reproducible while retaining expressive power for linear meta-classifiers.
-
-\subsection{Confidence-based attack with held-out attack validation}
-Let $\mathcal{D}_{\mathrm{atk}} = \{(\phi(\hat{p}_v,y_v), \mathbbm{1}\{v \in \mathcal{T}\}) : v \in \mathcal{T} \cup \mathcal{S}\}$. We shuffle indices, allocate half of the tuples to train a logistic regression attacker and the other half to score AUROC and accuracy. This internal split mitigates trivial overfitting of the attack model to the same nodes it evaluates, though it does not constitute a fully independent graph draw; shadow attacks below partially address distributional shift.
-
-\textbf{Interpretation.} High AUROC implies that linear combinations of $\phi$ separate member from non-member posteriors. Failure (AUROC $\approx 0.5$) suggests posteriors are statistically similar across masks under these features---either because the target generalizes well in confidence space or because the attack representation is too coarse.
-
-\subsection{Threshold attack on true-class confidence}
-The threshold attack constructs a \emph{single} scalar score per node, namely $\phi_2$. We compute the global median $\tau$ across both members and non-members, then treat $\phi_2 > \tau$ as the membership prediction rule; AUROC evaluates how well this score ranks members. This extremely parsimonious adversary is useful as a sanity check: if sophisticated attacks succeed but the threshold attack fails, leakage may hinge on nonlinear combinations of entropy and margin captured only in $\phi_{1,3,4}$.
-
-\subsection{Shadow-model attack and transfer}
-We instantiate a shadow classifier with identical architecture, optimizer, and defense schedule as the target, trained on an independent synthetic sample (new seed) or on a resampled Planetoid split. Attack training stacks shadow-derived $\phi$-vectors with membership labels; evaluation applies the fitted attacker to $\phi$ extracted from the \emph{target} posteriors \cite{shokri2017membership}. Transfer failure indicates strong distribution shift between shadow and target posteriors, whereas transfer success corroborates confidence-based findings.
-
-\subsection{Calibration error}
-Let $\mathrm{conf}_v = \max_c \hat{p}_{v,c}$ and $\mathrm{acc}_v = \mathbbm{1}\{\arg\max \hat{p}_v = y_v\}$. Partition $[0,1]$ into $B$ equal-width bins. Expected calibration error (ECE) is
+To train the membership inference attack models, we use the four scalars of the prediction vector, $\hat{p}_v$, and the true label of each data point, $y_v$~\cite{salem2019mlleaks}. These four scalars for each node $v$ are defined in equations~\eqref{eq:phi12} and~\eqref{eq:phi34}:
 \begin{equation}
-\mathrm{ECE} = \sum_{b=1}^{B} \frac{|V_b|}{|V_{\mathrm{te}}|} \left| \mathrm{acc}(V_b) - \overline{\mathrm{conf}}(V_b) \right|,
-\label{eq:ece}
+\phi_1 = \max_c \hat{p}_{v,c}, \quad \phi_2 = \hat{p}_{v,y_v},
+\label{eq:phi12}
 \end{equation}
-where $V_b$ are test nodes whose confidence falls in bin $b$, and $\mathrm{acc}(V_b)$, $\overline{\mathrm{conf}}(V_b)$ denote bin averages. We use $B{=}10$ on test nodes.
+\begin{equation}
+\phi_3 = -\sum_{c=1}^{C} \hat{p}_{v,c}\log(\hat{p}_{v,c}+\varepsilon), \quad \phi_4 = -(1-\phi_1)\log(\phi_1+\varepsilon).
+\label{eq:phi34}
+\end{equation}
+Each of these features represents a different value of the model and prediction of each node in the graph. $\phi_1$ indicates the confidence of the model in its best prediction for the node's class. $\phi_2$ is the confidence that the model has in the true label of the node. Often, the training data for the model contains many instances of the true label of each training point so the model is very confident in its prediction of the label of those nodes. $\phi_3$ is the entropy of the prediction vector. This scalar represents the distribution of the confidence of the model's predictions for each of the classes. If the model is confident in its prediction of the label of each node, then $\phi_3$ will be small. When $\phi_3$ is large, it means that the model spreads its confidence equally between all classes. $\phi_4$ returns some measure of the confidence of the model in the difference between its best predicted label and the true label of the node. The four scalars in equations~\eqref{eq:phi12} and~\eqref{eq:phi34} are referred to collectively as the $\phi$-vector of each node. These $\phi$-vectors represent the information that will be fed into the membership inference attack models described in the following section.
 
-\section{Lightweight Defenses}
+\textbf{Confidence attack.} A model with $\phi$-vectors from all the nodes in the training set $\mathcal{T}$ and the test set $\mathcal{S}$ is created. These $\phi$-vectors are split into two separate groups of 50\% each. Using the $\phi$-vectors from one group, we train a logistic regression classifier model. The trained model is used to predict the membership status of the nodes in the other group. This model's area under the receiver operating characteristic curve (AUROC) is reported as a metric of the success of the membership inference attack.
+
+\textbf{Threshold attack.} This model is the simplest attack model; it uses only the value of $\phi_2$ for each node. This value is compared directly to the median of the value of the true label of all the nodes in the network. If the value of the true label of a node is lower than the median of all the nodes in the network, it is classified as an ordinary node that does not belong to the model's training set.
+
+\textbf{Shadow-model attack.} An attacker that uses the shadow-model attack trains a shadow model with the same architecture as the target model and with the same privacy-preserving defenses but with data that is independent of the training data for the target model~\cite{shokri2017membership}. The shadow model's $\phi$-vectors are learned and used to predict the membership status of the target model's training data points. If the shadow model can successfully predict the membership status of these nodes, it suggests that the membership signal is not specific to the training data of the target model.
+
+\subsection{Lightweight defenses}
 \label{sec:defenses}
 
-Unless noted, defenses apply only to GNN parameters; baselines always train under vanilla cross-entropy without structural modifications. Each mechanism below therefore isolates a distinct inductive bias: stochastic topology (DropEdge), target smoothing (label smoothing), optimization truncation (early stopping), output compression (masking), or permanent edge deletion (sparsification).
+Besides using differential privacy to train the graph neural networks, there are also other techniques that can be used to protect the membership information in the graph. The five presented defenses are among the most commonly used by practitioners without the need to implement differentially private infrastructure. All of the defenses are applied only to the graph neural networks, while the baselines are trained using vanilla cross-entropy loss during training. All hyperparameters are held fixed across the grid (Table~\ref{tab:hyper}).
 
-\subsection{Vanilla training baseline}
-The baseline minimizes $\mathcal{L}_0 = -\sum_{v \in \mathcal{T}} \log \hat{p}_{v,y_v}$ using Adam with fixed learning rate and weight decay until the epoch budget or early-stopping rule fires. No edge dropout, smoothing, or masking is applied. This configuration anchors all comparative statements.
+\textbf{None (baseline).} The baseline training uses cross-entropy loss with Adam optimizer on the training data $\mathcal{T}$.
 
-\subsection{DropEdge as stochastic graph augmentation}
-\textbf{Mechanism.} DropEdge \cite{rong2020dropedge} treats message-passing edges as a random set that can be subsampled independently at each forward pass during training. Concretely, each training epoch draws a Bernoulli mask on edges with retention probability $1-r_{\mathrm{de}}$; we set $r_{\mathrm{de}}=0.3$. Message passing therefore sees $G^{(t)}=(V,E^{(t)})$ where $E^{(t)}$ differs across iterations even though the underlying stored graph remains intact.
+\textbf{DropEdge}~\cite{rong2020dropedge} randomly deletes 30\% of the edges in the graph at each epoch ($r_{\mathrm{de}}=0.3$). The full graph is restored when making predictions with the model.
 
-\textbf{Rationale.} Random edge deletion acts as structured dropout: it discourages the optimizer from relying on any single edge for lowering loss, potentially smoothing decision boundaries and reducing overfitting to idiosyncratic neighborhoods---effects hypothesized to correlate with lower membership leakage when memorization drives confidence gaps.
+\textbf{Label smoothing} is applied to the training data. Instead of minimizing the cross-entropy loss between the true labels and the model predictions, smoothed labels are used, where the true label is replaced with a distribution over all classes (and each class is assigned a probability of $1/C$). The smoothing parameter $\alpha$ is set to 0.1. While this type of smoothing is often used to regularize vision models to improve the calibration of their predicted softmax outputs, we are curious whether this type of regularization has any effect on reducing the membership information leakage from the graphs.
 
-\textbf{Inference.} At test time we revert to the full edge set $E$ except when confidence masking post-processes logits. Hence DropEdge perturbs optimization dynamics without permanently damaging connectivity information available at deployment.
+\textbf{Early stopping} is used during training. Training is halted if the training loss does not drop by a small value ($\delta=10^{-4}$) after training for $p=15$ epochs. This is intended to prevent the model from learning by heart all of the training examples.
 
-\subsection{Label smoothing as KL training}
-\textbf{Mechanism.} Rather than one-hot vectors $e_{y_v}$, we minimize KL$(\tilde{q}_v \| \mathrm{softmax}(z_v))$ where $\tilde{q}_{v,y_v}=1-\alpha+\alpha/C$ and $\tilde{q}_{v,c}=\alpha/C$ for $c \neq y_v$, with $\alpha=0.1$. Equivalently, this penalizes extremal logits even when the classifier would confidently separate training points.
+\textbf{Confidence masking} is applied during inference to the model predictions. The predictions for all classes except the $k=2$ most likely classes are set to zero. This mimics API functions that may not return class labels with low confidence. The same masking is applied to the shadow models.
 
-\textbf{Rationale.} Smoothing is often motivated by calibration and adversarial robustness; for membership inference, the hypothesis is that softer targets shrink the gap between member and non-member posteriors \cite{yeom2018privacy}.
-
-\textbf{Empirical caveat.} Our experiments show that smoothing can \emph{increase} attack AUROC and ECE on graph models, implying that redistributing mass without aligning train-test exchangeability may amplify rather than attenuate score-based leakage.
-
-\subsection{Early stopping based on training loss trajectories}
-\textbf{Mechanism.} Because no validation mask is reserved in the minimal pipeline, early stopping monitors the \emph{training} cross-entropy with patience $p=15$: if for $p$ consecutive epochs the loss fails to improve by at least $\delta=10^{-4}$ relative to the best epoch $t^\star$, weights roll back to the checkpoint at $t^\star$ and optimization halts.
-
-\textbf{Rationale.} The intended effect mirrors classical regularization: halt before parameters encode fine-grained noise. This interacts subtly with graph losses because neighborhood coupling may cause loss plateaus even when membership-relevant confidence patterns continue evolving.
-
-\subsection{Confidence masking at inference time}
-\textbf{Mechanism.} After computing softmax outputs, we retain the top-$k$ predicted class probabilities with $k=2$, set all other probabilities to zero, and renormalize the retained mass. Shadow models undergo the same post-processing so attack transfer reflects realistic masked APIs.
-
-\textbf{Rationale.} Masking hides tail probabilities from clients, modeling settings where only top-ranked classes are released \cite{choquette2021labelonly}. Entropy-based MIAs may degrade if $\phi_3$ loses sensitivity; conversely, if members concentrate remaining mass differently than non-members, AUROC can persist.
-
-\textbf{Sensitivity sketch.} Confidence masking induces a piecewise gate on logits before softmax. If $\mathcal{K}$ is the retained top-$k$ index set, gradients of $\hat{p}$ with respect to suppressed logits are effectively zeroed, while active coordinates retain the standard softmax Jacobian. This explains why attacks relying on tail-probability behavior may weaken, yet member/non-member gaps can remain through top-class statistics.
-
-\subsection{Edge sparsification before optimization}
-\textbf{Mechanism.} Unlike DropEdge, sparsification applies an edit to $E$ only once before training. Each undirected edge pair has a probability $r_{\mathrm{es}}=0.2$ of being deleted; the resulting graph $\tilde{E} \subset E$ is used for training and inference. Deleting both stored directions of an edge pair ensures that undirected semantics are respected.
-
-\textbf{Rationale.} By removing edges from the stored graph, the receptive field of the network is reduced. Such an operation has mixed results in that using the same sparsified graph for training, inference, and shadow evaluation does not provide a gain in privacy for GCN on low-homophily medium-density graphs.
-
-\textbf{Comparison to DropEdge.} DropEdge samples the edges of the stored graph $E$ at each step of training; sparsification does not offer a re-sampling mechanism. Hence, the two methods are not interchangeable.
-
-\section{Experimental Protocol}
-
-\subsection{Optimization}
-Adam with learning rate $\eta=0.01$, weight decay $5\times 10^{-4}$, maximum $T{=}50$ epochs, PyTorch CPU backend in reported runs. Defense hyperparameters match Table~\ref{tab:hyper}.
+\textbf{Edge sparsification} deletes each edge in the graph with probability $r_{\mathrm{es}}=0.2$ prior to training and trains the model using this sparse graph for both training and inference. Thus, this method both randomly deletes edges at each training iteration (like DropEdge), but it also permanently deletes edges from the graph before training begins.
 
 \begin{table}[!t]
 \caption{Defense hyperparameters (fixed across the grid).}
@@ -415,29 +358,11 @@ Edge sparsification & $r_{\mathrm{es}} = 0.2$ \\
 \end{tabular}
 \end{table}
 
-\subsection{Replication design and configuration management}
-Seeds $\mathcal{S}=\{42,123,456,789,1024\}$ index independent train-test permutations and synthetic instantiations. Each tuple (dataset, model, defense, seed) yields one CSV row of metrics. Hyperparameters such as learning rate, epoch cap, and defense rates live in a YAML file so that reproducing or extending the study does not require modifying Python modules beyond plugin hooks; this separation mirrors best practices for ML reproducibility in security-sensitive evaluations.
+\subsection{Experimental protocol}
 
-This paper reports the \texttt{experiment\_config\_paper.yaml} grid: Cora, Citeseer, six synthetic regimes, four model families, five random seeds, five lightweight GNN defenses plus no defense, and confidence/threshold/shadow attacks. Other repository components (e.g., large-graph, LiRA, and DP-SGD hooks) are treated as future extensions and are not part of the reported claims.
+All models train with Adam ($\eta{=}0.01$, weight decay $5{\times}10^{-4}$) for up to $T{=}50$ epochs on CPU. Seeds $\mathcal{S}=\{42,123,456,789,1024\}$ control synthetic graph generation, train--test splits, and attacker subsplits. The file \texttt{experiment\_config\_paper.yaml} declares the full grid: Cora, Citeseer, six synthetics, four models, three attacks, five defense mechanisms plus a no-defense baseline, and five seeds.
 
-\subsection{Implementation details and attack-split conventions}
-Experiments run in Python with PyTorch and PyTorch Geometric for graph training and Planetoid loading, scikit-learn for feature-only baselines and attack classifiers, and pandas for aggregation. For synthetic graphs ($n{=}400$), CPU execution is sufficient for full sweeps. The confidence attacker uses a $50/50$ shuffle split over member/non-member tuples for internal attack train/eval partitioning. Shadow models for synthetic settings regenerate data using seed $s{+}999$ to reduce overlap with target realizations while preserving the same generator family.
-
-\subsection{Reproducibility checklist}
-The YAML configuration enumerates datasets $\times$ models $\times$ defenses $\times$ seeds; running the main driver produces row-level CSVs, then summary and significance tables. Figure scripts consume these stored CSV artifacts directly. Controlled randomness enters through split permutations, synthetic edge sampling, DropEdge masks, and attack subsplits; fixed seeds make these paths repeatable.
-
-\subsection{Statistical testing}
-For defense $d$ versus none, let $a_s^{(d)}$ and $a_s^{(0)}$ denote paired confidence-attack AUROC at seed $s$. We report mean differences and two-sided paired $t$-tests with test statistic
-\begin{equation}
-t = \frac{\bar{\Delta}}{s_{\Delta}/\sqrt{|\mathcal{S}|}}, \quad \Delta_s = a_s^{(d)} - a_s^{(0)},
-\end{equation}
-with $|\mathcal{S}|{=}5$. We also compute percentile bootstrap confidence intervals over seeds for metric means. Normality is not guaranteed for AUROC differences at tiny sample sizes, and no multiple-comparison correction is applied; we therefore interpret $p$-values as exploratory indicators rather than definitive causal claims.
-
-\subsection{Computational complexity}
-Per trial, target training costs $\mathcal{O}(T |E| d_h)$ for sparse matrix multiplies in two GCN layers with hidden width $d_h{=}64$, dominated by graph convolution when $|E|$ is $\mathcal{O}(\rho n^2)$ at medium density. Shadow training duplicates this cost. Attack training on $\mathcal{O}(n)$ nodes with four features is negligible versus graph forward passes. Overall wall-clock scales roughly linearly in $|E|$ for fixed $T$.
-
-\subsection{Algorithmic summary}
-Algorithm~\ref{alg:exp} sketches one experimental trial.
+For each GNN defense $d$, we compare confidence-attack AUROC against the no-defense baseline using paired differences across seeds and exploratory two-sided $t$-tests. We also report bootstrap confidence intervals over seeds. Because we test many regime--defense pairs, $p$-values should be read as exploratory indicators rather than definitive claims. Algorithm~\ref{alg:exp} summarizes one trial; Appendix~\ref{app:repro} describes the software stack and reproducibility workflow.
 
 \begin{algorithm}[t]
 \caption{Single trial $(\mathrm{dataset},\mathrm{model},\mathrm{defense},\mathrm{seed})$}
@@ -454,92 +379,38 @@ Algorithm~\ref{alg:exp} sketches one experimental trial.
 \end{algorithmic}
 \end{algorithm}
 
-\subsection{Pipeline diagram and methodological structure}
-Fig.~\ref{fig:pipeline} orders the benchmark stages and should be read together with Fig.~\ref{fig:synthgen}: the latter explains \emph{how} graphs arrive in the repository, while the former explains \emph{how} models, shadows, and attackers consume them. Tables~\ref{tab:synth}--\ref{tab:regimes} catalogue input statistics; Section~\ref{sec:models} fixes hypothesis classes; Section~\ref{sec:attacks} formalizes threats; Section~\ref{sec:defenses} enumerates mitigations.
+\section{Results}
+\label{sec:empirical}
 
-\begin{figure}[H]
-\centering
-\resizebox{\linewidth}{!}{%
-\begin{tikzpicture}[
-  font=\footnotesize\sffamily,
-  node distance=6mm and 8mm,
-  box/.style={draw, rounded corners=2pt, minimum width=2.8cm, minimum height=8mm, align=center},
-  arr/.style={-{Stealth[length=2mm]}, thick},
-]
-\node[box] (d) {Dataset + split\\\footnotesize(synthetic or citation)};
-\node[box, right=of d] (t) {Train target model\\\footnotesize(defense optional)};
-\node[box, right=of t] (p) {Posteriors on\\\footnotesize train and test nodes};
-\node[box, below=of d] (s) {Train shadow model\\\footnotesize(disjoint seed or split)};
-\node[box, below=of t] (a) {Attack models\\\footnotesize(conf.\ / thresh.\ / shadow)};
-\node[box, below=of p] (m) {Utility + calibration\\\footnotesize+ privacy metrics};
-\draw[arr] (d) -- (t);
-\draw[arr] (t) -- (p);
-\draw[arr] (d) -- (s);
-\draw[arr] (p) -- (a);
-\draw[arr] (s) -- (a);
-\draw[arr] (a) -- (m);
-\end{tikzpicture}
-}
-\caption{End-to-end benchmark: target training, posterior extraction, shadow training, attack evaluation, and reporting.}
-\label{fig:pipeline}
-\end{figure}
+We organize findings by RQ1--RQ4 so each subsection answers one question, presents supporting figures and tables, and closes with an explicit takeaway. Unless stated otherwise, summaries aggregate five random seeds; confidence-attack AUROC is the primary privacy metric. Higher attack AUROC means higher privacy risk.
 
-\section{Empirical Results}
+\subsection{RQ1: GNN versus feature-only vulnerability}
+\label{sec:rq1}
 
-Unless stated otherwise, numerical summaries aggregate five seeds per cell using mean and standard deviation in plots and tables. Section~\ref{sec:datasets} and Table~\ref{tab:regimes} identify each synthetic regime; Section~\ref{sec:attacks} defines attack scores whose AUROC we report.
+\textbf{Claim.} Graph neural networks are not more vulnerable than feature-only models.
 
-\subsection{Comparative vulnerability}
-Fig.~\ref{fig:overview} summarizes AUROC without defense. Under high homophily, attack AUROC clusters near $0.5$, indicating limited separability between member and non-member score profiles. Under low homophily and sparsity, GCN rises to $\approx 0.59$ while GraphSAGE and non-graph models remain near $0.51$--$0.53$. This gap is practically meaningful because it appears under the same attack protocol and data family, suggesting that leakage is not a generic consequence of using graphs but an interaction between architecture and structural regime. Fig.~\ref{fig:overviewheat} complements this view with a compact heatmap across models and synthetic settings.
+\textbf{Synthetic graphs.} Fig.~\ref{fig:overview} and Table~\ref{tab:auc} present results of four different model families on six different types of synthetic graphs with no defenses included. In settings with a high degree of homophily (nodes with similar features tend to connect to one another), all the models have an attack AUROC that clusters around 0.5. In settings with low homophily and sparse connectivity, however, the GCN model achieves an AUROC of $\sim 0.59$, while the other three model types achieve only $\sim 0.51$ to $0.53$. Furthermore, as presented in Fig.~\ref{fig:overviewheat}, the heatmap for the same experiments shows the GCN model's AUROC brightening to higher values in the low-homophily and sparse graphs. Thus, the GCN appears to leak more information about membership in such regimes.
 
-\begin{figure}[H]
+\textbf{Citation benchmarks.} While synthetic graphs allow for isolation of structural features of the graphs, real-world graphs also include features of nodes themselves. As presented in Fig.~\ref{fig:citationpanel} and in the numbers below the figures, for the Planetoid citation graphs, the results of the attack without any defensive mechanisms show the feature-only models to have higher AUROC values than the GNN models; the logistic regression model reaches an AUROC of 0.735, the MLP model achieves 0.772, the GCN model 0.554, and the GraphSAGE model 0.635. Furthermore, the same trends appear on the Citeseer graphs: the logistic regression model reaches 0.730, the MLP model reaches 0.830, while the GNNs reach 0.632 (GCN) and 0.720 (GraphSAGE). The features of the nodes in the Planetoid graphs are highly separable on average; thus, models that fit those features well (like the MLP) leak more membership information than models that smooth node features over their neighborhoods (like the GCN).
+
+\textbf{Takeaway (RQ1):} There is no general rule that GNNs leak more membership information than feature-only models. On synthetic graphs, the GCN model can leak more information in settings with low homophily and sparsity; on the citation benchmarks, however, the feature-only models leak more information overall.
+
+\begin{figure}[!t]
 \centering
 \includegraphics[width=\linewidth]{basic_fig1_attack_auc_models_no_defense.png}
-\caption{Attack AUROC without defense across model families.}
+\caption{Attack AUROC without defense across model families (synthetic regimes).}
 \label{fig:overview}
 \end{figure}
 
-\begin{figure}[H]
+\begin{figure}[!t]
 \centering
 \includegraphics[width=\linewidth]{basic_fig4_heatmap_models_x_setting.png}
 \caption{No-defense attack AUROC heatmap across models and synthetic regimes.}
 \label{fig:overviewheat}
 \end{figure}
 
-\subsection{Citation benchmark behavior}
-Cora and Citeseer complicate any simple claim that graph models leak more than feature-only baselines. With no defense, Cora confidence-attack AUROC is 0.735 for LogReg, 0.772 for MLP, 0.554 for GCN, and 0.635 for GraphSAGE. Citeseer shows the same qualitative pattern: 0.730 for LogReg, 0.830 for MLP, 0.632 for GCN, and 0.720 for GraphSAGE. These results suggest that feature separability and posterior confidence can dominate graph-specific effects on citation datasets, whereas controlled synthetic regimes isolate when graph structure itself makes GCN more vulnerable.
-
-\subsection{Structural mediation}
-Attack AUROC for GCN rises as homophily drops and tends to increase when $\rho$ decreases within the low-homophily family. GraphSAGE frequently achieves high predictive accuracy with AUROC still near chance, underscoring that accuracy and membership distinguishability need not align. Put differently, utility parity does not imply privacy parity: two models can be equally accurate while exposing different membership signals through their posterior geometry.
-
-\begin{figure}[H]
-\centering
-\includegraphics[width=\linewidth]{basic_fig2_gcn_attack_auc_by_setting.png}
-\caption{GCN without defense across synthetic regimes.}
-\label{fig:gcnbar}
-\end{figure}
-
-\subsection{Defense interactions}
-Label smoothing increases AUROC in multiple cells; paired tests identify degradation for GraphSAGE on low-homophily sparse graphs at $\alpha{=}0.1$ ($+0.094$ AUROC, $p=0.0421$), for Cora GCN ($+0.039$ AUROC, $p=0.0039$), and for Citeseer GraphSAGE ($+0.067$ AUROC, $p=3.1\times10^{-6}$). Its calibration effects are dataset-dependent: it reduces ECE in some settings but increases ECE or creates more membership-separable posterior patterns in others. After correcting edge sparsification to use the same undirected-thinned graph for training, inference, and shadow evaluation, the earlier low-homophily medium-density GCN privacy improvement does not persist (0.5627 to 0.5638 AUROC, $\Delta=+0.0011$, $p=0.9684$; bootstrap 95\% CIs [0.530, 0.596] vs. [0.526, 0.619]). DropEdge, early stopping, masking, and sparsification therefore exhibit regime-dependent effects rather than universal privacy improvements.
-
-\begin{table}[!hbp]
-\caption{Illustrative paired-test highlights for confidence-attack AUROC. Positive $\Delta$ means higher leakage; $p$-values are exploratory because many comparisons are evaluated.}
-\label{tab:sig}
-\centering
-\footnotesize
-\begin{tabular}{@{}llrr@{}}
-\toprule
-\textbf{Setting / model} & \textbf{Defense} & \textbf{$\Delta$ AUC} & \textbf{$p$} \\
-\midrule
-Low-medium / GCN & Edge sparsif. & $+0.001$ & 0.9684 \\
-Low-sparse / SAGE & Label smooth. & $+0.094$ & 0.0421 \\
-Cora / GCN & Label smooth. & $+0.039$ & 0.0039 \\
-Citeseer / SAGE & Label smooth. & $+0.067$ & $3.1{\times}10^{-6}$ \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-\begin{table}[!hbp]
-\caption{Mean confidence-attack AUROC without defense ($|\mathcal{S}|{=}5$).}
+\begin{table}[!t]
+\caption{Mean confidence-attack AUROC without defense ($|\mathcal{S}|{=}5$), synthetic regimes.}
 \label{tab:auc}
 \centering
 \small
@@ -555,87 +426,142 @@ Low homophily, sparse  & 0.508 & 0.506 & 0.592 & 0.520 \\
 \end{tabular}
 \end{table}
 
-\begin{figure}[H]
-\centering
-\includegraphics[width=\linewidth]{basic_fig3_gcn_defenses_low_med.png}
-\caption{GCN defenses on low-homophily medium-density graphs.}
-\label{fig:defenses}
-\end{figure}
-
-\subsection{Utility--privacy and structure-aware trends}
-Figs.~\ref{fig:tradeoff} and~\ref{fig:homophily} visualize the utility--privacy frontier and measured-homophily trend, highlighting where high utility coexists with low attack AUROC. Figs.~\ref{fig:density} and~\ref{fig:defrank} complement this view with density-wise leakage trends and a defense effectiveness panel for the citation benchmarks.
-
-\begin{figure}[H]
-\centering
-\includegraphics[width=\linewidth]{fig2_privacy_utility_tradeoff.png}
-\caption{Privacy--utility scatter across GNN defenses.}
-\label{fig:tradeoff}
-\end{figure}
-
-\begin{figure}[H]
-\centering
-\includegraphics[width=\linewidth]{fig3_leakage_vs_homophily.png}
-\caption{Attack AUROC versus measured homophily in synthetic regimes.}
-\label{fig:homophily}
-\end{figure}
-
-\begin{figure}[H]
-\centering
-\includegraphics[width=\linewidth]{fig5_leakage_vs_density.png}
-\caption{Density-wise leakage trends across homophily regimes.}
-\label{fig:density}
-\end{figure}
-
-\begin{figure}[H]
-\centering
-\includegraphics[width=\linewidth]{fig4_defense_effectiveness.png}
-\caption{Defense effectiveness ranking for citation benchmarks.}
-\label{fig:defrank}
-\end{figure}
-
-\FloatBarrier
-
-\subsection{Citation-oriented and comprehensive views}
-Fig.~\ref{fig:citationpanel} provides a citation-based comparison panel, while Fig.~\ref{fig:heat6} gives a comprehensive heatmap that summarizes model/setting behavior at a glance.
-
-\begin{figure}[H]
+\begin{figure}[!t]
 \centering
 \includegraphics[width=\linewidth]{fig1_attack_auc_vs_model.png}
 \caption{Citation benchmark comparison across model families.}
 \label{fig:citationpanel}
 \end{figure}
 
-\begin{figure}[H]
+\subsection{RQ2: Homophily and density}
+\label{sec:rq2}
+
+\textbf{Claim.} For GCN, attack AUROC tends to increase as homophily decreases and as density $\rho$ decreases. GraphSAGE often achieves strong classification accuracy while attack AUROC remains near chance.
+
+Fig.~\ref{fig:gcnbar} plots the AUROC of the GCN attack across the six synthetic regimes. As expected, within a fixed density regime, the homophily decreases from right to left, and the leakage increases. Furthermore, within the low-homophily regime, the sparse graphs have a higher AUROC than the dense graphs. Fig.~\ref{fig:homophily} depicts the relationship between homophily and AUROC for several different model--defense combinations. Fig.~\ref{fig:density} presents the effect of graph density for different levels of homophily.
+
+GraphSAGE yields surprisingly different results from the GCN: it often outperforms the GCN on accuracy but has a confidence-attack AUROC close to 0.5 even in heterophilic settings. Such behavior has implications for the deployment of GraphSAGE: a site administrator who relies only on accuracy to gauge the safety of a model could incorrectly assume that GraphSAGE is either safe or unsafe with respect to membership distinguishability.
+
+\textbf{Takeaway (RQ2):} The structure of the graph has an impact on the privacy risk of the GCN model in a way that is both predictable and generalizable across regimes; accuracy and membership distinguishability are related metrics, but they are not interchangeable.
+
+\begin{figure}[!t]
+\centering
+\includegraphics[width=\linewidth]{basic_fig2_gcn_attack_auc_by_setting.png}
+\caption{GCN without defense across synthetic regimes.}
+\label{fig:gcnbar}
+\end{figure}
+
+\begin{figure}[!t]
+\centering
+\includegraphics[width=\linewidth]{fig3_leakage_vs_homophily.png}
+\caption{Attack AUROC versus measured homophily in synthetic regimes.}
+\label{fig:homophily}
+\end{figure}
+
+\begin{figure}[!t]
+\centering
+\includegraphics[width=\linewidth]{fig5_leakage_vs_density.png}
+\caption{Density-wise leakage trends across homophily regimes.}
+\label{fig:density}
+\end{figure}
+
+\subsection{RQ3: Lightweight defenses}
+\label{sec:rq3}
+
+While label smoothing is often introduced to reduce the overconfidence of models, one might expect it to hide the membership of training examples. Our experiments show the opposite in several cells. In Table~\ref{tab:sig}, we report the results of applying label smoothing to GraphSAGE on low-homophily sparse graphs ($+0.094$ AUROC, $p=0.0421$), Cora with a GCN ($+0.039$, $p=0.0039$), and Citeseer with a GraphSAGE model ($+0.067$, $p=3.1{\times}10^{-6}$). In Fig.~\ref{fig:heat6}, we show label-smoothed models tend to be warmer than their no-defense counterparts. Moreover, label smoothing also makes the models more susceptible to calibration error. In the remainder of the paper, we investigate a few additional defenses: edge sparsification. In low-homophily medium-density graphs, GCN with sparsification achieves the same attack AUROC as when edges are not sparsified ($0.563$ vs.\ $0.563$, $p=0.9684$). Similarly, permanently thinning the edges in a graph neither significantly helps nor hurts a model trained with the GraphSAGE algorithm. Other defenses like DropEdge, early stopping, and confidence masking exhibit mixed results (Fig.~\ref{fig:defenses} and Fig.~\ref{fig:defrank}). For effective defenses, auditing a model with attacks specifically on that target graph and model is required. Label smoothing, therefore, should not be applied to models as a means of providing privacy by default.
+
+\begin{table}[!t]
+\caption{Illustrative paired-test highlights for confidence-attack AUROC. Positive $\Delta$ means higher leakage; $p$-values are exploratory.}
+\label{tab:sig}
+\centering
+\footnotesize
+\begin{tabular}{@{}llrr@{}}
+\toprule
+\textbf{Setting / model} & \textbf{Defense} & \textbf{$\Delta$ AUC} & \textbf{$p$} \\
+\midrule
+Low-medium / GCN & Edge sparsif. & $+0.001$ & 0.9684 \\
+Low-sparse / SAGE & Label smooth. & $+0.094$ & 0.0421 \\
+Cora / GCN & Label smooth. & $+0.039$ & 0.0039 \\
+Citeseer / SAGE & Label smooth. & $+0.067$ & $3.1{\times}10^{-6}$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[!t]
+\centering
+\includegraphics[width=\linewidth]{basic_fig3_gcn_defenses_low_med.png}
+\caption{GCN defenses on low-homophily medium-density graphs.}
+\label{fig:defenses}
+\end{figure}
+
+\begin{figure}[!t]
+\centering
+\includegraphics[width=\linewidth]{fig4_defense_effectiveness.png}
+\caption{Defense effectiveness ranking for citation benchmarks.}
+\label{fig:defrank}
+\end{figure}
+
+\begin{figure}[!t]
 \centering
 \includegraphics[width=\linewidth]{fig6_comprehensive_heatmap.png}
 \caption{Comprehensive attack AUROC heatmap across datasets, models, and defenses.}
 \label{fig:heat6}
 \end{figure}
 
+\subsection{RQ4: Utility--privacy tradeoffs}
+\label{sec:rq4}
+
+In general, the best utility-privacy tradeoffs will exist for models that exhibit a high level of generalization, such as models that are trained with high homophily values or with GraphSAGE in cases of heterophilic graphs. The worst utility-privacy tradeoffs will exist for any models that have an adverse structure in their graphs (such as using a GCN with low-homophily sparse graphs) combined with any defenses that increase the privacy leakage of the model. In Fig.~\ref{fig:tradeoff}, we plot the accuracy of the models against their AUROC scores for graph attacks for each of the defenses. For an ideal privacy-preserving model, the points would lie along the upper-left region of the plots, where accuracy is high and the AUROC for attacks is low. For the label-smoothed models, however, the points shift rightward in the plots, indicating that accuracy is maintained but the models exhibit higher leakage.
+
+\begin{figure}[!t]
+\centering
+\includegraphics[width=\linewidth]{fig2_privacy_utility_tradeoff.png}
+\caption{Privacy--utility scatter across GNN defenses.}
+\label{fig:tradeoff}
+\end{figure}
+
 \FloatBarrier
 
 \section{Discussion}
 
-\textbf{Mechanistic interpretation.} In high-homophily settings, neighbors of a supervised node tend to have similar class predictions to the supervised node itself, leading to similar posterior distributions on supervised versus held-out nodes under black-box score tests. Under low-homophily settings, the aggregation operation of a GCN tends to create a loss and confidence signal that is separable between training and test node masks \cite{yeom2018privacy,olatunji2021mia,pei2020geomgcn,zhu2020beyondhomophily}. Within the citation datasets, however, models relying solely upon the node features of a graph tend to exhibit a greater degree of membership leakage than GNN models, indicating that the separability of the feature representation may be the main factor influencing the leakage of membership information in these settings. Thus, these results indicate that the main factor driving the leakage of membership is the difference in the shape of the model confidence distributions for supervised versus held-out nodes.
+\subsection{Why these patterns occur}
+High homophily allows a GCN to produce similar posteriors for both training and held-out nodes during training. Thus, there is no signal for an attacker leveraging a score-based attack method to determine the membership status of a held-out node. With lower homophily, the GCN might produce different outputs for training nodes than for held-out nodes; the GCN's parameters are updated during training using the labels of training nodes but not for held-out nodes. This leads to potential exploitation by an attacker using $\phi$-features~\cite{yeom2018privacy,olatunji2021mia,pei2020geomgcn,zhu2020beyondhomophily}. For citation graphs, the features that are among the most separable are the bag-of-words features. Thus, models relying solely on linear and MLP models memorize these features well but exhibit smoothing with GCNs that average the bag-of-words features.
 
-\textbf{Defense pitfalls.} Label smoothing has been shown to work well in smoothing the posterior distributions for supervised nodes, but with no guarantee of flatter posteriors for supervised versus held-out nodes in graph settings; in some datasets, label smoothing can even increase the AUROC of the attacker \cite{choquette2021labelonly}. Similarly, permanent edge sparsification can remove structural pathways between supervised and held-out nodes prior to training, but the resulting models have shown mixed results in enforcing membership privacy. Thus, calibration and topology-based defenses should not be assumed to have any privacy-preserving properties without evaluating their impact upon attack success.
+\subsection{Defense pitfalls}
+Applying label smoothing to a model redistributes the probabilities of model predictions away from the true label. However, there is no guarantee that the distribution of probabilities for members and non-members will become indistinguishable from one another. In several cells, label smoothing led to an increase in both ECE and attack success (AUROC)~\cite{choquette2021labelonly}. Furthermore, approaches like edge sparsification and DropEdge affect the information flow within a graph model. However, their effectiveness as a privacy-preserving method relies upon whether the GCN model was over-relying upon specific edges to memorize the training labels. There is no calibration or topology alteration technique that can be considered private without evaluating its effectiveness against score-based black-box attacks on the specific graph upon which the model is to be deployed.
 
-\textbf{Limitations.} The synthetic graphs used in this paper do not include models of community structure, heterophily, or feature noise. The node labels are sampled iid uniformly over the number of classes, and the node features are clustered Gaussian blobs grouped according to their class labels; thus, feature-only methods can achieve high accuracy. The synthetic graph setting enables studying homophily and density effects while excluding the influence of feature noise. However, it does not exhaustively consider feature-noise regimes where graph structure alone may be more important for node classification. In this work, only the lightweight score-based MIAs are evaluated. More strict evaluations of label-only \cite{choquette2021labelonly}, likelihood-ratio \cite{carlini2022membership}, and low false positive rate (FPR) auditing methods can offer further insight into the efficacy of the MIAs. Five random seeds are used to generate the results. More seeds would provide better statistical power in the evaluations. The significance of the difference in accuracy between two methods is evaluated using the paired $t$-test. However, because there are so many defenses and regimes evaluated in this work, the p-values from the $t$-tests should only be considered exploratory. The defenses proposed in this work are lightweight and practical; however, formally private training methods such as differentially private (DP) GNNs, e.g., GAP \cite{sajadmanesh2023gap}, are the best methods to employ when meeting regulatory privacy requirements.
+\subsection{Limitations and external validity}
+The synthetic graphs used contain only two homophily bands and blob features. Other structures of interest in graph analysis, such as communities or the continuous dimension of heterophily, are not represented in these graphs. The findings of this investigation are limited to the types of graphs that can be generated by our model and do not represent any general laws regarding all possible graphs. Additionally, the citation benchmark graphs are not exclusively synthetic but do include real-world graphs. Thus, the validity of this experiment is confounded by the fact that the features of these graphs are often different from those used in the synthetic graph experiments. Furthermore, only score-based black-box attacks are evaluated. An analysis of label-only~\cite{choquette2021labelonly} or likelihood-ratio tests~\cite{carlini2022membership} would have revealed different results. Five different seeds were used in the experiments. The statistical significance of the results was evaluated using the paired $t$-test, and the $p$-values obtained are exploratory in nature. The lightweight defenses evaluated in this study are not a substitute for applying differentially private training techniques when strong privacy guarantees are required~\cite{sajadmanesh2023gap}.
 
 \subsection{Practitioner guidelines}
-Deployers should (i) define the membership predicate precisely before auditing; (ii) record confidence histograms and ECE alongside accuracy when evaluating privacy interventions; (iii) avoid interpreting label smoothing as a privacy mechanism absent attack evaluation on graph data; (iv) treat structural sparsification as a setting-dependent heuristic rather than a guaranteed privacy defense; and (v) plan for adversaries stronger than linear $\phi$-attacks when stakes are high \cite{carlini2022membership}.
+Based upon these findings, graph model deployers should: (i)~make certain that the predicate of the membership definition is carefully defined prior to evaluating the privacy of the model; (ii)~report the confidence and ECE of a model's predictions in addition to its accuracy; (iii)~avoid treating label smoothing as a method of ensuring the privacy of a model without testing the model against score-based black-box attacks on the specific graph upon which the model will be deployed; (iv)~treat edge sparsification and similar techniques as a hypothesis to test rather than a guarantee of membership privacy; and (v)~ensure that their model is robust against attacks stronger than linear $\phi$-attacks if their concern regarding the privacy of the model is to be strong~\cite{carlini2022membership}.
 
 \section{Conclusion}
 
-This paper studied when graph neural networks leak information about which nodes were used for supervised training, and whether simple defenses can reduce that leakage. The main conclusion is that membership privacy in graph learning is not determined by the model alone. It depends on the interaction between the graph structure, the model architecture, the strength of the node features, the confidence behavior of the model, and the defense being applied. In controlled synthetic graphs, GCNs showed the highest leakage when the graph structure was unfavorable, especially in low-homophily regimes where connected nodes often belonged to different classes. In citation benchmarks, however, feature-only models could leak more when the node features were already highly separable. These results show that there is no single rule such as ``GNNs always leak more'' or ``graph structure always protects privacy.''
+In this work, we have investigated whether deep graph neural networks (GCNs) leak membership information of supervised training nodes and whether simple defenses against membership queries reduce such information leakage. Our findings indicate that information leakage is setting-dependent. GCNs tend to leak membership information most under low homophily and sparse synthetic graphs. Furthermore, models that do not rely upon graph messages, such as those using only bag-of-words features, tend to leak more under citation graphs than do GCNs. Label smoothing, a popular technique to improve generalization, often increases the information leakage of the models. Thus, there is no guarantee that applying such smoothing will protect the privacy of the training data. The notion of privacy for any model must be measured on the specific graph, model, and defense that are to be used when deploying the model. We have also released a configuration-driven codebase that enables others to easily reproduce the experiments reported herein. In future work, it will be interesting to extend this work to use a larger budget for model seeds, adopt more strict attacks with lower false-positive rates, continue investigating the difficulty of features for model generalization, and consider differentially private deep learning methods to train GCNs~\cite{carlini2022membership,sajadmanesh2023gap,tramer2016stealing,jayaraman2019evaluating}.
 
-The defense results also show that lightweight privacy mechanisms must be evaluated carefully. Label smoothing, which is often expected to reduce overconfidence, frequently increased attack AUROC in our experiments. Edge sparsification produced mixed results after being implemented as permanent undirected edge thinning for both training and inference. Overall, the most important lesson is that privacy risk in graph learning is \emph{structurally contingent}: it must be measured under the specific graph, model, and deployment setting being used. Future work should expand this study with larger replications, stronger likelihood-ratio attacks \cite{carlini2022membership}, low-false-positive-rate auditing, feature-difficulty ablations, and differentially private GNN baselines \cite{sajadmanesh2023gap}. These extensions would support broader model-risk and deployment auditing practices for graph-based machine learning systems \cite{jayaraman2019evaluating,tramer2016stealing}.
+\appendices
+
+\section{Synthetic edge-sampling procedure}
+\label{app:edgesampling}
+
+Let $N_{\mathrm{tgt}}(\rho)=\lfloor \rho n(n-1)/2 \rfloor$ be the number of undirected edges in the graph with density parameter $\rho$. With target homophily $h_{\mathrm{tgt}} \in \{0.3, 0.8\}$, we sample $\lfloor h_{\mathrm{tgt}} N_{\mathrm{tgt}}(\rho) \rfloor$ proposed edges within each class and the remainder between classes. Candidate edges are sampled with the label constraints, deduplicated with a hash set, and the resulting pairs are stored in both directions in the PyTorch Geometric graph object. If the number of proposed edges is zero, at least one edge is added between two randomly chosen nodes in the graph. Due to the duplicate rejection step, the realized values for $h(G)$ and the density of the resulting graph may differ slightly from the targeted values; in all reported results, these realized quantities are presented for each seed of the synthetic graphs.
+
+\section{Implementation and reproducibility}
+\label{app:repro}
+
+All experiments are conducted with Python~3, utilizing the PyTorch, PyTorch Geometric, scikit-learn, and pandas Python packages. The configuration file \texttt{experiment\_config\_paper.yaml} contains the settings for each experiment: the datasets to use, the models, defenses, and attacks to evaluate, the seeds for the experiments, and the directories in which results should be written. Running the driver script (\texttt{run\_final.py} with the \texttt{PRIVACYGNN\_CONFIG} parameter set to the experiment configuration file) performs all experiments and writes the results to CSV files. The figure scripts within the repository read the CSV files and regenerate the plots presented in this paper. Randomness is introduced into the experiments at four different stages: splitting the datasets into training and test samples, sampling synthetic edges within the training set, applying the DropEdge defense masks during training, and splitting the training samples into two sets of equal size for training and testing the confidence attacker. Each experiment is run with the sequence of seeds $\{42, 123, 456, 789, 1024\}$ for these four steps. Each shadow model is trained with the same masking as the target model to simulate the API that the confidence attacker will face when attempting to attack the target. Each experiment is configured to run on a CPU; training the GCN models involves $\mathcal{O}(T|E|d_h)$ operations for $T$ training epochs and hidden layer width $d_h=64$, and training the attack models on a sample of $\mathcal{O}(n)$ four-dimensional feature vectors is negligible in comparison. The full set of experiments was performed on a CPU running $n=400$ synthetic graphs.
+
+\section{Confidence masking}
+\label{app:masking}
+
+Confidence masking of the graph neural network models involves discarding the logits for the $k$ classes with the smallest logits (here $k=2$), replacing their values with a large negative value (such as $-100$), and applying the softmax function to normalize the remaining logits. Attacks that rely upon the tail probabilities of the model's logits distribution (such as entropy $\phi_3$) will lose sensitivity to membership after masking; however, if the training examples have different concentrations of the model's remaining probability mass upon the top two classes compared to the nodes held out for testing, the remaining entropies ($\phi_1$, $\phi_2$, and $\phi_4$) may retain their sensitivity to model membership. The shadow models are masked in the same way as the target models to simulate the API that the confidence attacker will use against the target model.
 
 \section*{Code Availability}
-The code and experiment configuration files used in this study are publicly available at \url{https://github.com/krishharma/privacy-gnn}. The repository includes YAML configuration files, PyTorch and scikit-learn implementations, CSV aggregation scripts, and matplotlib figure-generation scripts needed to reproduce the reported tables and plots.
+The code that accompanies this paper is available at: \texttt{https://github.com/PrivacyAI-Lab/privacygnn}. The code includes the experiment configuration files, the Python models, the Python scripts to aggregate the experiments' results in CSV format, and the matplotlib scripts to recreate the figures within this paper.
 
 \section*{Acknowledgment}
-Research conducted in the Data Science Laboratory (DiSC), University of Nevada, Las Vegas.
+Research conducted with the Data Science Laboratory (DiSC), University of Nevada, Las Vegas.
 
 \FloatBarrier
 \begin{thebibliography}{00}

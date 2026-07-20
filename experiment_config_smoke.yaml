@@ -1,0 +1,25 @@
+device: "cpu"
+data_dir: "data"
+results_dir: "results"
+
+training:
+  epochs: 2
+  lr: 0.01
+
+dp_sgd:
+  epochs: 1
+  batch_size: 1024
+  max_grad_norm: 1.0
+  noise_multiplier: 1.0
+  delta: 1.0e-5
+
+datasets:
+  - "Cora"
+  - "synthetic_low_sparse"
+models:
+  - "GCN"
+defenses:
+  - name: "none"
+  - name: "epsd_tuned"
+seeds:
+  - 42

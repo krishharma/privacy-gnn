@@ -1,0 +1,17 @@
+dataset_id,model,ego_gap_difference,conf_attack_auc
+Citeseer,GCN,0.025765135884284973,0.6322
+Citeseer,GraphSAGE,0.038715502619743346,0.7198
+Cora,GCN,0.010003885254263878,0.5539
+Cora,GraphSAGE,0.047985967993736264,0.6352
+synthetic_high_dense,GCN,4.869621534453473e-07,0.4943
+synthetic_high_dense,GraphSAGE,-0.00021642913125106134,0.5087
+synthetic_high_medium,GCN,0.00461362823843956,0.4873
+synthetic_high_medium,GraphSAGE,-0.016806000471115114,0.5263
+synthetic_high_sparse,GCN,0.06957519054412842,0.5279
+synthetic_high_sparse,GraphSAGE,-0.2754570543766022,0.539
+synthetic_low_dense,GCN,0.00086584547534585,0.5112
+synthetic_low_dense,GraphSAGE,-0.13888089656829833,0.5102
+synthetic_low_medium,GCN,0.024022847414016724,0.5627
+synthetic_low_medium,GraphSAGE,-0.1901951789855957,0.5339
+synthetic_low_sparse,GCN,0.1635250687599182,0.592
+synthetic_low_sparse,GraphSAGE,-0.34956499338150027,0.5199

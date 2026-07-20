@@ -15,10 +15,7 @@ datasets:
   - synthetic_low_sparse
   - synthetic_low_medium
   - synthetic_low_dense
-  # ogbn-arxiv requires a full OGB + neighbor-sampling pipeline (see ogb_loader.py stub).
-  # - ogbn-arxiv
-  # Optional large graph (uncomment; uses NeighborLoader — slower):
-  # - Reddit
+  - ogbn-arxiv
 
 models:
   - LogReg
@@ -29,9 +26,9 @@ models:
 # Which attacks to run (ϕ1–ϕ4 features unchanged for confidence/threshold/shadow).
 attacks:
   - confidence
-  - threshold
   - shadow
-  - lira
+  - label_only
+  - loss
 
 lira:
   n_shadows: 3
@@ -69,17 +66,49 @@ defenses:
   - name: none
     params: {}
   - name: dropedge
+    params: { rate: 0.1 }
+  - name: dropedge
+    params: { rate: 0.2 }
+  - name: dropedge
     params: { rate: 0.3 }
+  - name: dropedge
+    params: { rate: 0.5 }
+  - name: label_smoothing
+    params: { alpha: 0.01 }
+  - name: label_smoothing
+    params: { alpha: 0.05 }
   - name: label_smoothing
     params: { alpha: 0.1 }
-  - name: early_stopping
-    params: { patience: 15 }
-  - name: confidence_masking
-    params: { top_k: 2 }
+  - name: label_smoothing
+    params: { alpha: 0.2 }
+  - name: edge_sparsification
+    params: { rate: 0.05 }
+  - name: edge_sparsification
+    params: { rate: 0.1 }
   - name: edge_sparsification
     params: { rate: 0.2 }
+  - name: edge_sparsification
+    params: { rate: 0.3 }
   - name: dp_sgd
-    params: {}
+    params: { noise_multiplier: 0.5 }
+  - name: dp_sgd
+    params: { noise_multiplier: 1.0 }
+  - name: dp_sgd
+    params: { noise_multiplier: 2.0 }
+  - name: epsd
+    params: { lambda_epsd: 0.01 }
+  - name: epsd
+    params: { lambda_epsd: 0.03 }
+  - name: epsd
+    params: { lambda_epsd: 0.1 }
+  - name: epsd
+    params: { lambda_epsd: 0.3 }
+  - name: epsd
+    params: { lambda_epsd: 1.0 }
+  - name: epsd
+    params: { lambda_epsd: 3.0 }
+  - name: epsd
+    params: { lambda_epsd: 10.0 }
 
 training:
   epochs: 50

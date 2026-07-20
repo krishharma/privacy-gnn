@@ -37,19 +37,24 @@ def load_citation(name, data_dir=None):
                 Planetoid.url = orig_url
 
 
-def make_synthetic(n=400, nf=50, nc=5, homo="high", dens="medium", seed=42):
+def make_synthetic(n=400, nf=50, nc=5, homo="high", dens="medium", seed=42, center_std=2.0, noise_std=0.8):
     """
     Generate a synthetic graph with controlled homophily and density.
-    Returns (Data, num_classes, num_features).
+    Returns (Data, num_classes, num_features). Data has a .stats dict.
     """
+    import hashlib
+    import networkx as nx
+    from sklearn.linear_model import LogisticRegression
+    from sklearn.model_selection import cross_val_score
     rng = np.random.RandomState(seed)
     labels = rng.randint(0, nc, n)
-    centers = rng.randn(nc, nf) * 2
-    feats = np.array([centers[l] + rng.randn(nf) * 0.8 for l in labels])
+    centers = rng.randn(nc, nf) * center_std
+    feats = np.array([centers[l] + rng.randn(nf) * noise_std for l in labels])
 
     density_map = {"sparse": 0.005, "medium": 0.015, "dense": 0.04}
-    target_edges = int(density_map[dens] * n * (n - 1) / 2)
-    homophily_frac = {"low": 0.3, "high": 0.8}[homo]
+    req_density = density_map[dens]
+    target_edges = int(req_density * n * (n - 1) / 2)
+    homophily_frac = {"low": 0.3, "medium": 0.55, "high": 0.8}.get(homo, 0.8)
     n_same = int(target_edges * homophily_frac)
     n_diff = target_edges - n_same
 
@@ -95,29 +100,83 @@ def make_synthetic(n=400, nf=50, nc=5, homo="high", dens="medium", seed=42):
     y = torch.tensor(labels, dtype=torch.long)
 
     perm = rng.permutation(n)
-    n_train = n // 2
+    n_train = int(n * 0.4)
+    n_val = int(n * 0.1)
     train_mask = torch.zeros(n, dtype=torch.bool)
+    val_mask = torch.zeros(n, dtype=torch.bool)
     test_mask = torch.zeros(n, dtype=torch.bool)
     train_mask[perm[:n_train]] = True
-    test_mask[perm[n_train:]] = True
+    val_mask[perm[n_train:n_train+n_val]] = True
+    test_mask[perm[n_train+n_val:]] = True
 
-    return Data(x=x, edge_index=edge_index, y=y, train_mask=train_mask, test_mask=test_mask), nc, nf
+    data = Data(x=x, edge_index=edge_index, y=y, train_mask=train_mask, val_mask=val_mask, test_mask=test_mask)
+    
+    # Compute stats
+    G = nx.Graph()
+    G.add_nodes_from(range(n))
+    edges = [(src[i], dst[i]) for i in range(len(src))]
+    G.add_edges_from(edges)
+    
+    degrees = [d for _, d in G.degree()]
+    components = list(nx.connected_components(G))
+    
+    # feature separation
+    try:
+        clf = LogisticRegression(max_iter=200, random_state=seed)
+        cv_score = float(cross_val_score(clf, feats, labels, cv=3).mean())
+    except Exception:
+        cv_score = float('nan')
+        
+    s_t, t_t = data.edge_index
+    realized_homo = float((data.y[s_t] == data.y[t_t]).float().mean().item()) if s_t.numel() > 0 else 0.0
+    realized_dens = float((data.edge_index.size(1) / 2) / (n * (n - 1) / 2)) if n > 1 else 0.0
+    
+    # Hashing
+    graph_bytes = feats.tobytes() + labels.tobytes() + edge_index.numpy().tobytes() + train_mask.numpy().tobytes() + val_mask.numpy().tobytes()
+    ghash = hashlib.sha256(graph_bytes).hexdigest()
+
+    data.stats = {
+        "req_density": float(req_density),
+        "realized_density": realized_dens,
+        "req_homophily": float(homophily_frac),
+        "realized_homophily": realized_homo,
+        "nodes": int(n),
+        "edges": int(G.number_of_edges()),
+        "components": int(len(components)),
+        "largest_comp_frac": float(len(max(components, key=len)) / n) if components else 0.0,
+        "isolated_frac": float(sum(1 for d in degrees if d == 0) / n),
+        "degree_mean": float(np.mean(degrees)),
+        "degree_median": float(np.median(degrees)),
+        "degree_max": float(np.max(degrees)),
+        "degree_var": float(np.var(degrees)),
+        "class_counts": np.bincount(labels, minlength=nc).tolist(),
+        "train_class_counts": np.bincount(labels[train_mask.numpy()], minlength=nc).tolist(),
+        "val_class_counts": np.bincount(labels[val_mask.numpy()], minlength=nc).tolist(),
+        "test_class_counts": np.bincount(labels[test_mask.numpy()], minlength=nc).tolist(),
+        "feat_cv_score": cv_score,
+        "center_std": float(center_std),
+        "noise_std": float(noise_std),
+        "seed": int(seed),
+        "graph_hash": ghash
+    }
+    
+    return data, nc, nf
 
 
 def resplit(data, seed):
-    """Create a new random train/test split (50/50) with the given seed."""
+    """Create a new random train/val/test split (40/10/50) with the given seed."""
     rng = np.random.RandomState(seed)
     n = data.num_nodes
     perm = rng.permutation(n)
-    n_train = n // 2
+    n_train = int(n * 0.4)
+    n_val = int(n * 0.1)
     d = data.clone()
     d.train_mask = torch.zeros(n, dtype=torch.bool)
+    d.val_mask = torch.zeros(n, dtype=torch.bool)
     d.test_mask = torch.zeros(n, dtype=torch.bool)
     d.train_mask[perm[:n_train]] = True
-    d.test_mask[perm[n_train:]] = True
-    # Clear val_mask if present (official OGB/Reddit splits) so training uses only train_mask.
-    if hasattr(d, "val_mask") and d.val_mask is not None:
-        d.val_mask = torch.zeros(n, dtype=torch.bool)
+    d.val_mask[perm[n_train:n_train+n_val]] = True
+    d.test_mask[perm[n_train+n_val:]] = True
     return d
 
 

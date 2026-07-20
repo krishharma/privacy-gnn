@@ -1,0 +1,48 @@
+device: "cpu"
+data_dir: "data"
+results_dir: "results"
+
+training:
+  epochs: 50
+  lr: 0.01
+  weight_decay: 5.0e-4
+
+dp_sgd:
+  epochs: 20
+  lr: 0.05
+  batch_size: 1024
+  max_grad_norm: 1.0
+  noise_multiplier: 1.0
+  delta: 1.0e-5
+
+datasets:
+  - "Cora"
+  - "Citeseer"
+  - "ogbn-arxiv"
+  - "synthetic_low_sparse"
+  - "synthetic_low_medium"
+  - "synthetic_low_dense"
+  - "synthetic_high_sparse"
+  - "synthetic_high_medium"
+  - "synthetic_high_dense"
+models:
+  - "GCN"
+  - "GraphSAGE"
+defenses:
+  - name: "none"
+  - name: "epsd_tuned"
+  - name: "dropedge"
+    params: {"rate": 0.3}
+  - name: "label_smoothing"
+    params: {"alpha": 0.1}
+  - name: "confidence_masking"
+    params: {"top_k": 2}
+  - name: "epsd"
+    params: {"lambda_epsd": 5.0, "ablation": "non_ego_consistency"}
+  - name: "dp_sgd"
+seeds:
+  - 42
+  - 123
+  - 456
+  - 789
+  - 999

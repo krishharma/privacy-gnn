@@ -1,0 +1,17 @@
+dataset,model,defense,metric,mean,std,ci_low,ci_high,n_seeds
+ogbn-arxiv,GCN,epsd,test_accuracy,0.56006,0.010075117865315508,0.55354,0.5686199999999999,5
+ogbn-arxiv,GCN,epsd,conf_attack_auc,0.58522,0.007261335965233967,0.58034,0.5914,5
+ogbn-arxiv,GCN,epsd,lira_attack_auc,,,,,5
+ogbn-arxiv,GCN,epsd,ece_test,0.2572,0.005998333101787541,0.25354,0.26266,5
+ogbn-arxiv,GCN,none,test_accuracy,0.58674,0.010628170115311492,0.57858,0.59514,5
+ogbn-arxiv,GCN,none,conf_attack_auc,0.57426,0.002927968579066396,0.5721999999999999,0.57682,5
+ogbn-arxiv,GCN,none,lira_attack_auc,,,,,5
+ogbn-arxiv,GCN,none,ece_test,0.19125999999999999,0.016191911561023294,0.1797275,0.20549999999999996,5
+ogbn-arxiv,GraphSAGE,epsd,test_accuracy,0.53684,0.0198333809523238,0.5219145,0.55144,5
+ogbn-arxiv,GraphSAGE,epsd,conf_attack_auc,0.594,0.0057714816122032536,0.58926,0.59802,5
+ogbn-arxiv,GraphSAGE,epsd,lira_attack_auc,,,,,5
+ogbn-arxiv,GraphSAGE,epsd,ece_test,0.14764,0.006476727568764954,0.1419,0.15307999999999997,5
+ogbn-arxiv,GraphSAGE,none,test_accuracy,0.6062799999999999,0.008595754766162205,0.59932,0.6132000000000001,5
+ogbn-arxiv,GraphSAGE,none,conf_attack_auc,0.53408,0.005630896909019018,0.5302999999999999,0.538666,5
+ogbn-arxiv,GraphSAGE,none,lira_attack_auc,,,,,5
+ogbn-arxiv,GraphSAGE,none,ece_test,0.06694,0.006503306851133506,0.06172,0.07118,5

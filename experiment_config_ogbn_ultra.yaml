@@ -1,0 +1,28 @@
+seeds: [42]
+
+datasets:
+  - ogbn-arxiv
+
+models:
+  - GCN
+
+attacks:
+  - confidence
+  - label_only
+
+defenses:
+  - name: none
+    params: {}
+  - name: epsd
+    params: { lambda_epsd: 5.0 }
+
+training:
+  epochs: 15
+  lr: 0.01
+  weight_decay: 0.0005
+
+device: cpu
+
+results_dir: results_ogbn_ultra
+data_dir: data
+figures_dir: figures_ogbn_ultra

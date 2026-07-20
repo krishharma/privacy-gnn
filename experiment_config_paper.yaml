@@ -39,6 +39,11 @@ defenses:
   - name: edge_sparsification
     params: { rate: 0.2 }
 
+  - name: epsd
+    params: { lambda_epsd: 5.0 }
+  - name: dp_sgd
+    params: { dp_epsilon: 1.0, dp_delta: 1e-5, dp_max_grad_norm: 1.0 }
+
 training:
   epochs: 50
   lr: 0.01

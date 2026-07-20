@@ -1,0 +1,64 @@
+# Ablations configuration (5 seeds, core regimes)
+seeds: [42, 123, 456, 789, 1011]
+
+datasets:
+  - Cora
+  - Citeseer
+  - synthetic_low_sparse
+
+models:
+  - GCN
+
+attacks:
+  - confidence
+  - threshold
+  - shadow
+  - label_only
+
+defenses:
+  - name: none
+    params: {}
+  - name: dropedge
+    params: { rate: 0.3 }
+  - name: label_smoothing
+    params: { alpha: 0.1 }
+  - name: early_stopping
+    params: { patience: 15 }
+  - name: confidence_masking
+    params: { top_k: 2 }
+  - name: edge_sparsification
+    params: { rate: 0.2 }
+  
+  # EPSD lambda ablations
+  - name: epsd_lambda_0
+    params: { lambda_epsd: 0.0 }
+  - name: epsd_lambda_1
+    params: { lambda_epsd: 1.0 }
+  - name: epsd_lambda_5
+    params: { lambda_epsd: 5.0 }
+  - name: epsd_lambda_10
+    params: { lambda_epsd: 10.0 }
+  
+  # EPSD architectural ablations
+  - name: epsd_ego_mask_only
+    params: { lambda_epsd: 5.0, ablation: "ego_mask_only" }
+  - name: epsd_non_ego_consistency
+    params: { lambda_epsd: 5.0, ablation: "non_ego_consistency" }
+    
+  # EPSD + CMK combination
+  - name: epsd_cmk
+    params: { lambda_epsd: 5.0, top_k: 2 }
+    
+  # DP-SGD Empirical Baseline
+  - name: dp_sgd
+    params: { dp_epsilon: 1.0, dp_delta: 1e-5, dp_max_grad_norm: 1.0 }
+
+training:
+  epochs: 50
+  lr: 0.01
+  weight_decay: 0.0005
+
+device: cpu
+results_dir: results
+data_dir: data
+figures_dir: figures

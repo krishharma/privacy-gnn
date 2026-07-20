@@ -118,26 +118,22 @@ def bootstrap_ci_over_seeds(
     lo_q, hi_q = alpha, 1.0 - alpha
     rows = []
     for tup, g in df.groupby(list(group_cols)):
-        ds, model, defense = tup
+        tup_vals = tup if isinstance(tup, tuple) else (tup,)
+        group_dict = dict(zip(group_cols, tup_vals))
         seeds = g["seed"].values
         if len(seeds) < 2:
             for m in metric_cols:
                 mu = float(np.nanmean(g[m].values))
-                rows.append(
-                    {
-                        "dataset": ds,
-                        "model": model,
-                        "defense": defense,
-                        "metric": m,
-                        "mean": mu,
-                        "std": float(np.nanstd(g[m].values, ddof=1))
-                        if len(g) > 1
-                        else 0.0,
-                        "ci_low": np.nan,
-                        "ci_high": np.nan,
-                        "n_seeds": int(len(g)),
-                    }
-                )
+                row = {
+                    "metric": m,
+                    "mean": mu,
+                    "std": float(np.nanstd(g[m].values, ddof=1)) if len(g) > 1 else 0.0,
+                    "ci_low": np.nan,
+                    "ci_high": np.nan,
+                    "n_seeds": int(len(g)),
+                }
+                row.update(group_dict)
+                rows.append(row)
             continue
         for m in metric_cols:
             vals = g.set_index("seed")[m].sort_index().values
@@ -146,19 +142,16 @@ def bootstrap_ci_over_seeds(
                 idx = rng.randint(0, len(vals), size=len(vals))
                 boots.append(np.nanmean(vals[idx]))
             boots = np.array(boots)
-            rows.append(
-                {
-                    "dataset": ds,
-                    "model": model,
-                    "defense": defense,
-                    "metric": m,
-                    "mean": float(np.mean(vals)),
-                    "std": float(np.std(vals, ddof=1)) if len(vals) > 1 else 0.0,
-                    "ci_low": float(np.quantile(boots, lo_q)),
-                    "ci_high": float(np.quantile(boots, hi_q)),
-                    "n_seeds": int(len(vals)),
-                }
-            )
+            row = {
+                "metric": m,
+                "mean": float(np.mean(vals)),
+                "std": float(np.std(vals, ddof=1)) if len(vals) > 1 else 0.0,
+                "ci_low": float(np.quantile(boots, lo_q)),
+                "ci_high": float(np.quantile(boots, hi_q)),
+                "n_seeds": int(len(vals)),
+            }
+            row.update(group_dict)
+            rows.append(row)
     return pd.DataFrame(rows)
 
 
