@@ -1,0 +1,4 @@
+tag,test_accuracy,lira_attack_auc,noise_mass,frac_protected
+harp,0.599,0.5048,20321.7,0.4
+lbp,0.1787,0.5009,50802.9,1.0
+none,0.666,0.5032,,

@@ -1,0 +1,61 @@
+{
+  "lte_spearman": [
+    {
+      "dataset": "Cora",
+      "n": 2708,
+      "spearman_lte_abs_phi2_gap": 0.07663338197928646,
+      "pvalue_gap": 0.0003573461364136363,
+      "spearman_lte_phi2": -0.25001522228570594,
+      "pvalue_phi2": 3.1801228709352574e-32,
+      "mean_risk_member": 0.3337973952293396,
+      "mean_risk_nonmember": 0.3238159120082855,
+      "test_acc": 0.8845798707294552
+    },
+    {
+      "dataset": "Citeseer",
+      "n": 3327,
+      "spearman_lte_abs_phi2_gap": 0.11804724068836223,
+      "pvalue_gap": 1.001900900056997e-09,
+      "spearman_lte_phi2": -0.2549488649508234,
+      "pvalue_phi2": 9.136854552790382e-41,
+      "mean_risk_member": 0.3903351426124573,
+      "mean_risk_nonmember": 0.39230409264564514,
+      "test_acc": 0.7422990232907588
+    },
+    {
+      "dataset": "Actor",
+      "n": 7600,
+      "spearman_lte_abs_phi2_gap": -0.00722093669192845,
+      "pvalue_gap": 0.5734761167593173,
+      "spearman_lte_phi2": -0.009295392033235029,
+      "pvalue_phi2": 0.46865522632040774,
+      "mean_risk_member": 0.5562868118286133,
+      "mean_risk_nonmember": 0.5583043694496155,
+      "test_acc": 0.3375
+    }
+  ],
+  "interpretation": "LTE is a three-term heuristic proxy (inv-degree, local heterophily, supervised-neighbor fraction), not a learned leakage estimator. Report Spearman with |\u03c6\u2082-gap|; if weak on Actor, treat as proxy.",
+  "stress_cell_lira_vs_conf": {
+    "status": "ok",
+    "observation": "On the controlled stress cell, conf AUROC \u22480.79 while LiRA \u22480.50. Likely causes: (1) membership signal is concentrated in max-confidence / entropy features that LR-\u03c6 exploits, while Gaussian LiRA on full logits is under-separated when Acc is near chance and class posteriors are diffuse; (2) n_shadows=4 with highly overfit targets yields noisy shadow likelihoods; (3) primary protocol metric is LiRA \u2014 this cell is a *stress test for conf AUROC*, not a LiRA-positive Volume finding.",
+    "summary_means": {
+      "test_accuracy": {
+        "none": 0.2911,
+        "sami": 0.2611
+      },
+      "conf_attack_auc": {
+        "none": 0.7936,
+        "sami": 0.6817
+      },
+      "lira_attack_auc": {
+        "none": 0.4937,
+        "sami": 0.5019
+      },
+      "gen_gap": {
+        "none": 0.4139,
+        "sami": 0.2419
+      }
+    },
+    "framing": "controlled_stress_test_not_volume_peer"
+  }
+}

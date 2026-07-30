@@ -1,0 +1,11 @@
+{
+  "n_protected_train": 375,
+  "n_failure": 13,
+  "failure_rate": 0.034666666666666665,
+  "mean_gap_none": 0.4570252174536387,
+  "mean_gap_harp": 0.10639183176851706,
+  "frac_failures_conf_gt_0.9": 0.15384615384615385,
+  "frac_failures_low_or_med_degree": 0.6153846153846154,
+  "frac_protected": 0.4000878348704436,
+  "narrative": "Of 375 protected train nodes on Chameleon, 13 (3%) do not shrink their train\u2212test confidence gap under HARP. Among failures, 15% already had clean true-class confidence >0.9: Laplace at \u03c3=0.3 rarely erases an already near-one-hot cue after renormalization. Population LiRA therefore moves only modestly\u2014the protector helps mid-confidence mass, not the overconfident tail."
+}

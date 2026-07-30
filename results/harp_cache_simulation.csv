@@ -1,0 +1,6 @@
+policy,hit_rate,miss_rate,bitexact_requery_rate,design_exact_frac
+none,0.86495,0.13505,1.0,1.0
+lbp_fresh,0.0,1.0,0.0,0.0
+lbp_B1,0.86495,0.13505,1.0,0.0
+harp_fresh,0.53685,0.46315,0.5631067961165048,0.6
+harp_B1,0.86495,0.13505,1.0,0.6

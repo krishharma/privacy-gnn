@@ -1,0 +1,46 @@
+{
+  "n_shadows": 2,
+  "seeds": [
+    42,
+    123,
+    456
+  ],
+  "means": {
+    "test_accuracy": {
+      "harp": 0.599,
+      "lbp": 0.1787,
+      "none": 0.666
+    },
+    "lira_attack_auc": {
+      "harp": 0.5143,
+      "lbp": 0.4985,
+      "none": 0.5016
+    },
+    "conf_attack_auc": {
+      "harp": 0.6719,
+      "lbp": 0.5053,
+      "none": 0.5274
+    },
+    "ece_test": {
+      "harp": 0.0852,
+      "lbp": 0.0106,
+      "none": 0.0514
+    },
+    "noise_mass": {
+      "harp": 20321.7,
+      "lbp": 50802.9,
+      "none": NaN
+    },
+    "frac_protected": {
+      "harp": 0.4,
+      "lbp": 1.0,
+      "none": NaN
+    },
+    "train_seconds": {
+      "harp": 117.3605,
+      "lbp": 85.4691,
+      "none": 85.2466
+    }
+  },
+  "note": "3-seed Acc bootstrap in harp_ogbn_bootstrap.csv / harp_ogbn_delta_acc.csv"
+}

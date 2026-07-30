@@ -1,0 +1,36 @@
+{
+  "split": "planetoid_public",
+  "dataset": "Cora",
+  "model": "GraphSAGE",
+  "n_shadows": 4,
+  "seeds": [
+    42,
+    123,
+    456,
+    789,
+    1024
+  ],
+  "means": {
+    "test_accuracy": {
+      "gtd": 0.8208,
+      "none": 0.7876,
+      "sami": 0.8368
+    },
+    "conf_attack_auc": {
+      "gtd": 0.8578,
+      "none": 0.9412,
+      "sami": 0.6347
+    },
+    "lira_attack_auc": {
+      "gtd": 0.5305,
+      "none": 0.5323,
+      "sami": 0.5106
+    },
+    "lira_tpr_at_0.01_fpr": {
+      "gtd": 0.0214,
+      "none": 0.0171,
+      "sami": 0.0085
+    }
+  },
+  "note": "Comparability appendix vs Olatunji/GTD-style public splits; primary paper uses 40/20/40."
+}

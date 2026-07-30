@@ -1,0 +1,10 @@
+dataset,model,defense,metric,mean,std,ci_low,ci_high,n_seeds
+ogbn-arxiv,GraphSAGE,harp,test_accuracy,0.5989666666666666,0.0022052966542697805,0.5971,0.6014,3
+ogbn-arxiv,GraphSAGE,harp,lira_attack_auc,0.5142666666666666,0.0015143755588800968,0.5132,0.516,3
+ogbn-arxiv,GraphSAGE,harp,ece_test,0.0852,0.006753517601961217,0.0777,0.0908,3
+ogbn-arxiv,GraphSAGE,lbp,test_accuracy,0.1787,0.004650806381693386,0.1753,0.18400000000000002,3
+ogbn-arxiv,GraphSAGE,lbp,lira_attack_auc,0.49846666666666667,0.0015695009822658122,0.4967,0.4997,3
+ogbn-arxiv,GraphSAGE,lbp,ece_test,0.0106,0.0009539392014169458,0.0095,0.0112,3
+ogbn-arxiv,GraphSAGE,none,test_accuracy,0.6660333333333334,0.0031005375877955874,0.6629,0.6690999999999999,3
+ogbn-arxiv,GraphSAGE,none,lira_attack_auc,0.5015999999999999,0.0008185352771872159,0.5009,0.5025,3
+ogbn-arxiv,GraphSAGE,none,ece_test,0.0514,0.010866922287382017,0.0391,0.0597,3

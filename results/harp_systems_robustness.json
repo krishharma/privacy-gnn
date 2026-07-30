@@ -1,0 +1,31 @@
+{
+  "host": {
+    "platform": "macOS-15.6-arm64-arm-64bit-Mach-O",
+    "processor": "arm",
+    "python": "3.13.5",
+    "torch": "2.13.0",
+    "cpu_count": 10
+  },
+  "timings": [
+    {
+      "dataset": "Cora",
+      "n": 2708,
+      "lte_ms": 3.7738334154710174,
+      "setup_ms": 37.107116798870265,
+      "harp_release_ms": 0.3948875004425645,
+      "lbp_release_ms": 0.6174666981678456,
+      "frac": 0.40066469719350073,
+      "mass": 325.5
+    },
+    {
+      "dataset": "PubMed",
+      "n": 19717,
+      "lte_ms": 0.6403833860531449,
+      "setup_ms": 498.53264179546386,
+      "harp_release_ms": 1.4494937495328486,
+      "lbp_release_ms": 2.3796916531864554,
+      "frac": 0.39990870822133184,
+      "mass": 2365.5
+    }
+  ]
+}

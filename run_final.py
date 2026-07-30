@@ -23,6 +23,7 @@ from stats_utils import (
     run_significance_tests,
     run_significance_tests_lira,
     run_bootstrap_summary,
+    run_confirmatory_tests,
 )
 
 warnings.filterwarnings("ignore")
@@ -99,16 +100,22 @@ def main():
     print("\n" + summary.to_string())
 
     if len(results) > 0:
+        adj = (config.get("stats") or {}).get("multiple_comparison", "holm")
         sig_path = f"{results_dir}/significance.csv"
-        sig_df = run_significance_tests(df, output_path=sig_path)
-        print(f"\nExploratory significance (paired t-test, conf AUC vs none): {sig_path}")
+        sig_df = run_significance_tests(df, output_path=sig_path, adjustment=adj)
+        print(f"\nSignificance (paired t-test + {adj}, conf AUC vs none): {sig_path}")
         if not sig_df.empty:
             print(sig_df.head(10).to_string())
 
         sig_lira_path = f"{results_dir}/significance_lira.csv"
-        sig_l = run_significance_tests_lira(df, output_path=sig_lira_path)
+        sig_l = run_significance_tests_lira(df, output_path=sig_lira_path, adjustment=adj)
         if not sig_l.empty:
-            print(f"\nExploratory significance (paired t-test, LiRA AUC vs none): {sig_lira_path}")
+            print(f"\nSignificance (paired t-test + {adj}, LiRA AUC vs none): {sig_lira_path}")
+
+        conf_path = f"{results_dir}/significance_confirmatory.csv"
+        conf_df = run_confirmatory_tests(df, output_path=conf_path, adjustment=adj)
+        if not conf_df.empty:
+            print(f"\nConfirmatory comparisons (adjusted): {conf_path}")
 
         boot_path = f"{results_dir}/summary_bootstrap.csv"
         boot_df = run_bootstrap_summary(

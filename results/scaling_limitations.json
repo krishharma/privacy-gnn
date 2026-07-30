@@ -1,0 +1,45 @@
+{
+  "ogbn_arxiv": "Enabled (NeighborLoader). See ogbn_volume_results.csv / ogbn_systems.json.",
+  "actor_ok": true,
+  "stretch_reddit_products": "Gated off (arxiv completed without \u226510-day margin requirement for stretch).",
+  "largest_graph": "ogbn-arxiv (~169k nodes).",
+  "api_qps_approx": 27236.1,
+  "ogbn_means": [
+    {
+      "defense": "gtd",
+      "acc": 0.4753,
+      "conf": 0.6075,
+      "lira": 0.5,
+      "train_s": 187.2943,
+      "wall_s": 439.21,
+      "rss": 1411.4667
+    },
+    {
+      "defense": "lbp",
+      "acc": 0.4542,
+      "conf": 0.5082,
+      "lira": 0.4989,
+      "train_s": 104.0234,
+      "wall_s": 280.0067,
+      "rss": 1411.4667
+    },
+    {
+      "defense": "none",
+      "acc": 0.666,
+      "conf": 0.5274,
+      "lira": 0.5016,
+      "train_s": 95.5717,
+      "wall_s": 257.7067,
+      "rss": 1225.8333
+    },
+    {
+      "defense": "sami",
+      "acc": 0.6426,
+      "conf": 0.5275,
+      "lira": 0.4991,
+      "train_s": 107.5822,
+      "wall_s": 357.3433,
+      "rss": 1411.4667
+    }
+  ]
+}

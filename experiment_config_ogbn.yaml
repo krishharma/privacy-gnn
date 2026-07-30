@@ -1,0 +1,65 @@
+# Volume confirmatory grid sized by results/ogbn_smoke_timing.json policy.
+project_name: PrivacyGNN_ogbn_volume
+data_dir: ./data
+results_dir: ./results
+figures_dir: ./figures
+device: cpu
+seed: 42
+config_hash: ogbn_volume_v2
+
+datasets:
+  - ogbn-arxiv
+
+models:
+  - GraphSAGE
+
+defenses:
+  - name: none
+    params: {}
+  - name: sami
+    params:
+      lam: 0.5
+      use_lte: true
+      use_gate: false
+      arch_aware: true
+      warmup_epochs: 3
+      entropy_coef: 0.05
+      noise_scale: 0.1
+      budget_B: 0.0
+  - name: gtd
+    params:
+      gamma: 0.5
+      stage1_frac: 1.0
+      pseudo_conf: 0.9
+  - name: lbp
+    params:
+      scale: 0.15
+
+attacks:
+  - confidence
+  - lira
+
+lira:
+  n_shadows: 2
+
+minibatch:
+  batch_size: 1024
+  num_neighbors: [15, 10]
+
+large_graph_use_official_split: true
+
+training:
+  epochs: 20
+  lr: 0.01
+  weight_decay: 5e-4
+  hidden: 64
+
+split:
+  train_ratio: 0.4
+  val_ratio: 0.2
+  test_ratio: 0.4
+
+multi_query_k: 1
+run_mlp_phi_attack: false
+
+seeds: [42, 123, 456]

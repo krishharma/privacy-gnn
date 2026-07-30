@@ -1,0 +1,7 @@
+dataset,seed,val_selected_frac,val_acc,test_acc_selected,test_lira_selected,oracle_frac,oracle_test_acc,oracle_test_lira
+Cora,42,0.2,0.8745,0.8717,0.5399,0.2,0.8717,0.5399
+Cora,123,0.2,0.8856,0.8532,0.5477,0.2,0.8532,0.5477
+Cora,456,0.2,0.869,0.8596,0.5284,0.2,0.8596,0.5284
+Chameleon,42,0.2,0.7451,0.4479,0.5882,0.2,0.4479,0.5882
+Chameleon,123,0.2,0.7385,0.483,0.5691,0.2,0.483,0.5691
+Chameleon,456,0.2,0.6967,0.4479,0.5766,0.2,0.4479,0.5766

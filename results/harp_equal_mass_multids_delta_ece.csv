@@ -1,0 +1,4 @@
+dataset,model,defense,baseline,metric,delta_mean,delta_std,ci_low,ci_high,n_seeds
+Citeseer,GraphSAGE,harp,lbp_equal_mass,ece_test,0.021866666666666663,0.013647466187294016,0.011799999999999991,0.0374,3
+Chameleon,GraphSAGE,harp,lbp_equal_mass,ece_test,0.023333333333333327,0.013082176169633758,0.011899999999999994,0.037599999999999995,3
+Actor,GraphSAGE,harp,lbp_equal_mass,ece_test,0.01793333333333334,0.008590886644190651,0.008300000000000002,0.02479999999999999,3

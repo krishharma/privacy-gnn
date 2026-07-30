@@ -1,0 +1,14 @@
+{
+  "none": {
+    "acc": 0.8793474915358571,
+    "boundary_auroc": 0.44860833333333333,
+    "mean_sigma_member": 72.20255045572917,
+    "mean_sigma_nonmember": 66.62254028320314
+  },
+  "sami": {
+    "acc": 0.8701138811942136,
+    "boundary_auroc": 0.4436833333333334,
+    "mean_sigma_member": 69.14455078125,
+    "mean_sigma_nonmember": 62.12416341145833
+  }
+}

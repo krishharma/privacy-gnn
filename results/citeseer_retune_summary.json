@@ -1,0 +1,59 @@
+{
+  "selected_params": {
+    "lam": 1.0,
+    "use_lte": true,
+    "use_gate": true,
+    "arch_aware": true,
+    "noise_scale": 0.25,
+    "budget_B": 0.0,
+    "warmup_epochs": 5,
+    "entropy_coef": 0.05
+  },
+  "select_mean_val_acc": 0.8503,
+  "means": {
+    "test_accuracy": {
+      "gtd": 0.7391,
+      "lbp": 0.6207,
+      "maskarmor": 0.7401,
+      "none": 0.7401,
+      "sami_locked_cora": 0.7312,
+      "sami_selected": 0.7435
+    },
+    "val_accuracy": {
+      "gtd": 0.7474,
+      "lbp": 0.6123,
+      "maskarmor": 0.7474,
+      "none": 0.7474,
+      "sami_locked_cora": 0.8301,
+      "sami_selected": 0.852
+    },
+    "conf_attack_auc": {
+      "gtd": 0.6293,
+      "lbp": 0.6293,
+      "maskarmor": 0.6343,
+      "none": 0.741,
+      "sami_locked_cora": 0.6423,
+      "sami_selected": 0.649
+    },
+    "lira_attack_auc": {
+      "gtd": 0.551,
+      "lbp": 0.5295,
+      "maskarmor": 0.6598,
+      "none": 0.5956,
+      "sami_locked_cora": 0.5374,
+      "sami_selected": 0.5375
+    },
+    "lira_tpr_at_0.01_fpr": {
+      "gtd": 0.0224,
+      "lbp": 0.0281,
+      "maskarmor": 0.0,
+      "none": 0.0454,
+      "sami_locked_cora": 0.0257,
+      "sami_selected": 0.0231
+    }
+  },
+  "delta_lira_selected_vs_none": -0.0581,
+  "delta_acc_selected_vs_none": 0.0034,
+  "second_flagship_bar_met": true,
+  "bar": "LiRA drop >=0.03 with Acc within 0.01 of none"
+}

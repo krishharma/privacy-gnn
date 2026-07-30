@@ -1,0 +1,9 @@
+{
+  "quintile_tpr_top_vs_bottom": {
+    "top_tpr_01": 0.004291845493562232,
+    "bottom_tpr_01": 0.006134969325153374
+  },
+  "gap_sami_vs_none": 0.0022999999999999687,
+  "tuned_dp_mean_acc": 0.4022776238842721,
+  "tuned_dp_mean_eps": 144.44418539912496
+}

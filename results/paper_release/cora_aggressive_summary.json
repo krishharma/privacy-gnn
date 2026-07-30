@@ -1,0 +1,32 @@
+{
+  "selected": {
+    "lam": 0.75,
+    "noise_scale": 0.65
+  },
+  "locked": {
+    "lam": 0.5,
+    "noise_scale": 0.35
+  },
+  "means": {
+    "none_acc": {
+      "aggressive": 0.8779,
+      "locked": 0.8796
+    },
+    "sami_acc": {
+      "aggressive": 0.8255,
+      "locked": 0.8733
+    },
+    "none_lira": {
+      "aggressive": 0.5688,
+      "locked": 0.5721
+    },
+    "sami_lira": {
+      "aggressive": 0.5055,
+      "locked": 0.511
+    },
+    "acc_ratio": {
+      "aggressive": 0.9403,
+      "locked": 0.9929
+    }
+  }
+}

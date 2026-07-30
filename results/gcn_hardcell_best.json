@@ -1,0 +1,27 @@
+{
+  "status": "honest_failure_mixed",
+  "dataset": "synthetic_low_sparse",
+  "model": "GCN",
+  "best_params": {
+    "lam": 1.0,
+    "use_lte": true,
+    "use_gate": false,
+    "arch_aware": true,
+    "noise_scale": 0.25,
+    "entropy_coef": 0.15,
+    "warmup_epochs": 5,
+    "budget_B": 0.0
+  },
+  "confirm": {
+    "none_acc": 0.7725,
+    "none_conf": 0.587,
+    "none_lira": 0.50216,
+    "sami_acc": 0.74626,
+    "sami_conf": 0.59334,
+    "sami_lira": 0.49942000000000003,
+    "delta_acc": -0.02623999999999993,
+    "delta_conf": 0.006340000000000012,
+    "delta_lira": -0.00274000000000002
+  },
+  "note": "Still mixed after arch-aware LTE; treat as pre-registered architecture modulation."
+}

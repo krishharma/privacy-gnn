@@ -1,0 +1,26 @@
+{
+  "name": "SPAB audit report",
+  "required_columns": [
+    "dataset",
+    "model",
+    "defense",
+    "homophily_h",
+    "density_rho",
+    "n_nodes",
+    "split_protocol",
+    "acc",
+    "lira_auroc",
+    "conf_auroc",
+    "tpr_at_1pct_fpr",
+    "train_seconds",
+    "n_shadows",
+    "leakage_band"
+  ],
+  "optional_columns": [
+    "api_qps",
+    "peak_mb",
+    "notes"
+  ],
+  "note": "Not a blind community benchmark; release artifact matching paper tables. Dropped peak_mb as required.",
+  "primary_privacy_metric": "lira_auroc"
+}

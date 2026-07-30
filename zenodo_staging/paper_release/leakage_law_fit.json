@@ -1,0 +1,28 @@
+{
+  "feature_cols": [
+    "het",
+    "sparsity",
+    "is_gcn",
+    "het_x_gcn",
+    "sparsity_x_gcn",
+    "snr",
+    "snr_x_inv"
+  ],
+  "coef": {
+    "het": 0.033642745928622125,
+    "sparsity": 0.01355218171090281,
+    "is_gcn": -0.004515268742894949,
+    "het_x_gcn": -0.013241516156308503,
+    "sparsity_x_gcn": -0.00047839293874884614,
+    "snr": 0.003078338668528659,
+    "snr_x_inv": 0.04527836379462809
+  },
+  "intercept": 0.5411031300526782,
+  "in_sample_r2": 0.6668436745674937,
+  "loo_mae": 0.037897495027380206,
+  "loo_spearman": 0.7032691264243082,
+  "n_cells": 96,
+  "n_loo_preds": 96,
+  "law_name": "SCML",
+  "law_statement": "Under controlled features, score-based GNN membership AUROC increases with heterophily and sparsity; GCN amplifies this; high feature SNR induces MLP-style feature-dominated leakage."
+}

@@ -1,0 +1,13 @@
+dataset,tag,test_accuracy,lira_attack_auc,ece_test,noise_mass,frac_protected
+Chameleon,harp,0.4515,0.5547,0.2378,273.1,0.3998
+Chameleon,harp_mask,0.4698,0.616,0.3668,0.0,0.3998
+Chameleon,lbp_eq,0.4394,0.5603,0.2144,273.24,1.0
+Chameleon,lbp_strong,0.3908,0.5387,0.2168,683.1,1.0
+Chameleon,memguard,0.4475,0.6055,0.1583,782.865,1.0
+Chameleon,none,0.4475,0.6178,0.2897,,
+Cora,harp,0.8357,0.5341,0.0372,325.4,0.4006
+Cora,harp_mask,0.8846,0.6386,0.0917,0.0,0.4006
+Cora,lbp_eq,0.8723,0.5203,0.1574,324.96,1.0
+Cora,lbp_strong,0.7159,0.517,0.1464,812.4,1.0
+Cora,memguard,0.8787,0.5378,0.1219,967.0187,1.0
+Cora,none,0.8787,0.5675,0.0533,,

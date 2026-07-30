@@ -1,0 +1,4 @@
+dataset,model,defense,seed,test_accuracy,conf_attack_auc,gap_attack_auc,dp_epsilon_approx,noise_multiplier,epochs,note
+Cora,GraphSAGE,dp_sgd_tuned,42,0.577100646352724,0.5476263556374052,0.5415512465373962,322.987017507026,0.15,100,High-utility DP reference (tuned); Pareto formal-privacy anchor.
+Cora,GraphSAGE,dp_sgd_tuned,123,0.5327793167128347,0.5256131673204844,0.530932594644506,322.987017507026,0.15,100,High-utility DP reference (tuned); Pareto formal-privacy anchor.
+Cora,GraphSAGE,dp_sgd_tuned,456,0.6168051708217913,0.5298442818069585,0.5300092336103417,322.987017507026,0.15,100,High-utility DP reference (tuned); Pareto formal-privacy anchor.

@@ -1,0 +1,4 @@
+tag,test_accuracy,lira_attack_auc,lira_tpr_at_0.01_fpr
+harp,0.6861,0.5031,0.5023
+lbp,0.3434,0.4997,0.4981
+none,0.8741,0.506,0.5059

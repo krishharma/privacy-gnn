@@ -1,0 +1,21 @@
+{
+  "title": "SPAB v1.0: A Scale-Aware Privacy Audit Protocol for Graph Neural Network Prediction APIs",
+  "upload_type": "dataset",
+  "description": "Audit protocol, frozen SPAB CSV, and reproduction scripts accompanying the IEEE BigData 2026 paper on scale-aware conditional membership-privacy audits for graph neural network prediction APIs. Primary metric: defense-aware LiRA. Includes ogbn-arxiv systems + negative control, Cora/Citeseer/Chameleon/Actor grids, and locked SAMI configs.",
+  "creators": [
+    {"name": "Sharma, Krish", "affiliation": "Ed W. Clark High School / UNLV"},
+    {"name": "Arifuzzaman, Shaikh", "affiliation": "University of Nevada, Las Vegas"}
+  ],
+  "keywords": [
+    "graph neural networks",
+    "membership inference",
+    "privacy audit",
+    "LiRA",
+    "ogbn-arxiv",
+    "SPAB"
+  ],
+  "license": "mit",
+  "access_right": "open",
+  "communities": [],
+  "related_identifiers": []
+}

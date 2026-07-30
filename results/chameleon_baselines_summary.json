@@ -1,0 +1,60 @@
+{
+  "dataset": "Chameleon",
+  "model": "GraphSAGE",
+  "n_shadows": 4,
+  "seeds": [
+    42,
+    123,
+    456,
+    789,
+    1024
+  ],
+  "sami_params": {
+    "lam": 0.5,
+    "use_lte": true,
+    "use_gate": true,
+    "arch_aware": true,
+    "noise_scale": 0.35,
+    "budget_B": 0.0,
+    "warmup_epochs": 5,
+    "entropy_coef": 0.05
+  },
+  "means": {
+    "test_accuracy": {
+      "gtd": 0.4746,
+      "lbp": 0.3888,
+      "maskarmor": 0.4485,
+      "none": 0.4485,
+      "sami": 0.4599
+    },
+    "conf_attack_auc": {
+      "gtd": 0.7874,
+      "lbp": 0.7606,
+      "maskarmor": 0.7572,
+      "none": 0.88,
+      "sami": 0.7894
+    },
+    "lira_attack_auc": {
+      "gtd": 0.5814,
+      "lbp": 0.5438,
+      "maskarmor": 0.7739,
+      "none": 0.6225,
+      "sami": 0.551
+    },
+    "lira_tpr_at_0.01_fpr": {
+      "gtd": 0.0207,
+      "lbp": 0.0327,
+      "maskarmor": 0.0,
+      "none": 0.0615,
+      "sami": 0.0301
+    },
+    "train_seconds": {
+      "gtd": 8.6285,
+      "lbp": 8.7637,
+      "maskarmor": 7.4937,
+      "none": 8.0983,
+      "sami": 25.3284
+    }
+  },
+  "homophily": 0.235
+}

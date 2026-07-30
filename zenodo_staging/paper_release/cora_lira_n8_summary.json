@@ -1,0 +1,18 @@
+{
+  "n_shadows": 8,
+  "n_seeds": 3,
+  "means": {
+    "test_accuracy": {
+      "none": 0.8787,
+      "sami": 0.8732
+    },
+    "conf_attack_auc": {
+      "none": 0.6546,
+      "sami": 0.5693
+    },
+    "lira_attack_auc": {
+      "none": 0.7041,
+      "sami": 0.5509
+    }
+  }
+}

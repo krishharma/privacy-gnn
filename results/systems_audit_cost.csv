@@ -1,0 +1,15 @@
+dataset,n_nodes,defense,train_seconds,source,wall_seconds,peak_rss_mb,n_shadows
+PubMed,,none,6.4128,timing_overhead,,,
+PubMed,,sami,21.6378,timing_overhead,,,
+PubMed,,sami_no_gate,13.3573,timing_overhead,,,
+Actor,7600.0,gtd,2.8574,actor_baselines,,,
+Actor,7600.0,lbp,3.02114,actor_baselines,,,
+Actor,7600.0,maskarmor,3.13936,actor_baselines,,,
+Actor,7600.0,none,3.53262,actor_baselines,,,
+Actor,7600.0,sami,9.02888,actor_baselines,,,
+ogbn-arxiv,169343.0,gtd,196.96953333333332,ogbn_volume,449.6366666666666,,
+ogbn-arxiv,169343.0,lbp,104.02336666666666,ogbn_volume,280.00666666666666,1411.4666666666665,
+ogbn-arxiv,169343.0,none,95.57166666666667,ogbn_volume,257.70666666666665,1225.8333333333333,
+ogbn-arxiv,169343.0,sami,107.5822,ogbn_volume,357.3433333333333,1411.4666666666665,
+ogbn-arxiv_n4,169343.0,none,134.97793333333334,ogbn_lira_n4,614.0733333333334,,4.0
+ogbn-arxiv_n4,169343.0,sami,169.21456666666668,ogbn_lira_n4,617.21,,4.0

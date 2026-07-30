@@ -1,0 +1,31 @@
+{
+  "cora_graphsage_conf": {
+    "delta_mean": -0.07638,
+    "delta_std": 0.006391556930826809,
+    "alpha": 0.05,
+    "power": 0.8,
+    "n_seeds_required": 0.05496189394321077,
+    "n_seeds_required_ceil": 1,
+    "cohens_dz": 11.950139977884781,
+    "observed_n_seeds": 5,
+    "delta_ci": [
+      -0.08178,
+      -0.07187999999999999
+    ]
+  },
+  "cora_graphsage_lira": {
+    "delta_mean": -0.027960000000000006,
+    "delta_std": 0.010181011737543589,
+    "alpha": 0.05,
+    "power": 0.8,
+    "n_seeds_required": 1.0406752277222213,
+    "n_seeds_required_ceil": 2,
+    "cohens_dz": 2.746288946597956,
+    "observed_n_seeds": 5,
+    "delta_ci": [
+      -0.03590000000000002,
+      -0.02023999999999999
+    ]
+  },
+  "paper_paragraph": "Power analysis (paired normal approximation, two-sided \u03b1=0.05, power=0.8). On Cora GraphSAGE, the observed confidence-attack \u0394AUROC (SAMI \u2212 none) has mean -0.076 with paired SD 0.006, implying approximately 1 seeds to detect this effect; we report 5 seeds with bootstrap CIs on the paired \u0394 itself."
+}

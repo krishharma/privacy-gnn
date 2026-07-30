@@ -1,0 +1,10 @@
+dataset,n_nodes,seed,n_shadows,acc,lira,defense
+PubMed,19717,42,2,0.8795,0.5194,none
+PubMed,19717,123,2,0.8779,0.5183,none
+PubMed,19717,456,2,0.8705,0.5162,none
+PubMed,19717,42,4,0.8795,0.504,none
+PubMed,19717,123,4,0.8779,0.5056,none
+PubMed,19717,456,4,0.8705,0.5063,none
+PubMed,19717,42,8,0.8795,0.5333,none
+PubMed,19717,123,8,0.8779,0.5292,none
+PubMed,19717,456,8,0.8705,0.5288,none

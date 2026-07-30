@@ -1,0 +1,9 @@
+{
+  "delta_l1": 2.0,
+  "locked_sigma": 0.3,
+  "locked_frac": 0.4,
+  "eps_protected_local": 6.6667,
+  "exact_frac": 0.6,
+  "global_eps": "infinity whenever ExactFrac>0",
+  "interpretation": "Finite local \u03b5 on the protected minority; \u03b5=\u221e on the clean majority. Global DP and ExactFrac>0 are incompatible by construction \u2014 the constrained-release tradeoff, not a missing proof."
+}

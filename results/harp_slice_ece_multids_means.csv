@@ -1,0 +1,9 @@
+dataset,variant,acc,ece_pop,ece_clean,ece_prot
+Actor,harp,0.3273,0.2619,0.2542,0.277
+Actor,none,0.3353,0.262,0.262,
+Chameleon,harp,0.4515,0.2378,0.2731,0.1858
+Chameleon,none,0.4475,0.2897,0.2897,
+Citeseer,harp,0.7158,0.0944,0.0828,0.1214
+Citeseer,none,0.7438,0.1398,0.1398,
+Cora,harp,0.8356,0.0368,0.0197,0.09
+Cora,none,0.8787,0.0533,0.0533,

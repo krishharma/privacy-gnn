@@ -1,0 +1,53 @@
+{
+  "dataset": "Actor",
+  "model": "GraphSAGE",
+  "n_seeds": 5,
+  "n_shadows": 4,
+  "locked_sami": {
+    "lam": 0.5,
+    "use_lte": true,
+    "use_gate": true,
+    "arch_aware": true,
+    "noise_scale": 0.35,
+    "budget_B": 0.0,
+    "warmup_epochs": 5,
+    "entropy_coef": 0.05
+  },
+  "means": {
+    "test_accuracy": {
+      "gtd": 0.3391,
+      "lbp": 0.2888,
+      "maskarmor": 0.3347,
+      "none": 0.3347,
+      "sami": 0.3172
+    },
+    "lira_attack_auc": {
+      "gtd": 0.5847,
+      "lbp": 0.5426,
+      "maskarmor": 0.7968,
+      "none": 0.6049,
+      "sami": 0.5516
+    },
+    "conf_attack_auc": {
+      "gtd": 0.8469,
+      "lbp": 0.7366,
+      "maskarmor": 0.79,
+      "none": 0.8754,
+      "sami": 0.7745
+    },
+    "lira_tpr_at_0.01_fpr": {
+      "gtd": 0.0197,
+      "lbp": 0.0281,
+      "maskarmor": 0.0,
+      "none": 0.0331,
+      "sami": 0.0313
+    },
+    "train_seconds": {
+      "gtd": 2.8574,
+      "lbp": 3.0211,
+      "maskarmor": 3.1394,
+      "none": 3.5326,
+      "sami": 9.0289
+    }
+  }
+}

@@ -1,0 +1,5 @@
+policy,attack_auc
+hop1,0.7189
+seed_only,1.0
+uniform,0.7798
+unprotected,1.0

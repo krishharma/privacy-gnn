@@ -1,0 +1,88 @@
+# IEEE BigData main-track experiment grid (SAMI + rigor protocol).
+# Usage: PRIVACYGNN_CONFIG=experiment_config_bigdata.yaml python run_final.py
+#
+# Confirmatory factors: Tier-A datasets, 10 seeds, LiRA primary privacy metric,
+# SAMI vs none/LBP/GTD/lightweight defenses. Ablations included as named defenses.
+# Never tune defenses on test attack AUROC (see EVALUATION_PROTOCOL.md).
+
+seeds: [42, 123, 456, 789, 1024, 2048, 3072, 4096, 5120, 6144]
+
+datasets:
+  - Cora
+  - Citeseer
+  - PubMed
+  - synthetic_high_sparse
+  - synthetic_high_medium
+  - synthetic_high_dense
+  - synthetic_low_sparse
+  - synthetic_low_medium
+  - synthetic_low_dense
+
+models:
+  - LogReg
+  - MLP
+  - GCN
+  - GraphSAGE
+
+attacks:
+  - confidence
+  - threshold
+  - shadow
+  - lira
+
+lira:
+  n_shadows: 8
+
+split:
+  train_ratio: 0.4
+  val_ratio: 0.2
+  test_ratio: 0.4
+
+defenses:
+  - name: none
+    params: {}
+  - name: dropedge
+    params: { rate: 0.3 }
+  - name: label_smoothing
+    params: { alpha: 0.1 }
+  - name: early_stopping
+    params: { patience: 15 }
+  - name: confidence_masking
+    params: { top_k: 2 }
+  - name: edge_sparsification
+    params: { rate: 0.2 }
+  - name: lbp
+    params: { scale: 0.3 }
+  - name: gtd
+    params: { gamma: 1.0, stage1_frac: 0.5, pseudo_conf: 0.8 }
+  - name: sami
+    params: { lam: 0.5, use_lte: true, use_gate: true, beta: 0.0, warmup_epochs: 5, noise_scale: 0.25 }
+  # Ablations (confirmatory module knockouts)
+  - name: sami_no_lte
+    params: { lam: 0.5, use_lte: false, use_gate: true, beta: 0.0, warmup_epochs: 5, noise_scale: 0.25 }
+  - name: sami_no_adv
+    params: { lam: 0.0, use_lte: true, use_gate: true, beta: 0.0, warmup_epochs: 5, noise_scale: 0.25 }
+  - name: sami_no_gate
+    params: { lam: 0.5, use_lte: true, use_gate: false, beta: 0.0, warmup_epochs: 5, noise_scale: 0.25 }
+  - name: sami_temp_only
+    params: { lam: 0.0, use_lte: true, use_gate: false, beta: 1.5, warmup_epochs: 5, noise_scale: 0.0 }
+  - name: advreg
+    params: { lam: 0.5, use_lte: false, use_gate: false, beta: 0.0, warmup_epochs: 5, noise_scale: 0.0 }
+
+training:
+  epochs: 50
+  lr: 0.01
+  weight_decay: 0.0005
+
+bootstrap:
+  n_resamples: 1000
+  confidence: 0.95
+
+stats:
+  multiple_comparison: holm
+
+device: cpu
+
+results_dir: results
+data_dir: data
+figures_dir: figures

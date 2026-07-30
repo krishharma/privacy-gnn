@@ -1,0 +1,73 @@
+{
+  "wall_s": 1673.4,
+  "canary": {
+    "seed": {
+      "harp": 207.0,
+      "lbp": 207.0,
+      "none": 207.0,
+      "sami": 207.0
+    },
+    "acc": {
+      "harp": 0.8357,
+      "lbp": 0.7159,
+      "none": 0.8787,
+      "sami": 0.8729
+    },
+    "lira_pop": {
+      "harp": 0.5342,
+      "lbp": 0.517,
+      "none": 0.5675,
+      "sami": 0.5111
+    },
+    "conf_pop": {
+      "harp": 0.5713,
+      "lbp": 0.5595,
+      "none": 0.6546,
+      "sami": 0.5693
+    },
+    "top_decile_conf_auc": {
+      "harp": 0.266,
+      "lbp": 0.5478,
+      "none": 0.5513,
+      "sami": 0.3397
+    },
+    "planted_canary_conf_auc": {
+      "harp": 0.4228,
+      "lbp": 0.5433,
+      "none": 0.5268,
+      "sami": 0.5212
+    },
+    "ece_test": {
+      "harp": 0.0367,
+      "lbp": 0.1464,
+      "none": 0.0533,
+      "sami": 0.1254
+    }
+  },
+  "photo": {
+    "test_accuracy": {
+      "harp": 0.7366,
+      "lbp": 0.5517,
+      "none": 0.8017,
+      "sami": 0.8613
+    },
+    "lira_attack_auc": {
+      "harp": 0.5012,
+      "lbp": 0.4991,
+      "none": 0.4997,
+      "sami": 0.5024
+    },
+    "noise_mass": {
+      "harp": 946.0,
+      "lbp": 2295.0,
+      "none": NaN,
+      "sami": 608.2402
+    },
+    "frac_protected": {
+      "harp": 0.4122,
+      "lbp": 1.0,
+      "none": NaN,
+      "sami": 0.9999
+    }
+  }
+}

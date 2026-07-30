@@ -1,0 +1,14 @@
+dataset,model,defense,baseline,metric,delta_mean,delta_std,ci_low,ci_high,n_seeds,value_col,baseline_tag
+Cora,GraphSAGE,harp,lbp_strong,test_accuracy,0.12450000000000001,0.014193132141990368,0.11322000000000002,0.13578,5,test_accuracy,lbp_strong
+Cora,GraphSAGE,harp,lbp_strong,lira_attack_auc,0.015959999999999974,0.0062062871348335,0.010599999999999988,0.020069499999999914,5,lira_attack_auc,lbp_strong
+Cora,GraphSAGE,harp,lbp_strong,ece_test,-0.10857999999999998,0.006553014573461598,-0.11348,-0.10328,5,ece_test,lbp_strong
+Cora,GraphSAGE,lbp_equal_mass,lbp_strong,test_accuracy,0.16306,0.010842186126423055,0.15458,0.17154000000000003,5,test_accuracy,lbp_strong
+Cora,GraphSAGE,lbp_equal_mass,lbp_strong,lira_attack_auc,0.0028999999999999916,0.0009219544457292653,0.002200000000000002,0.003599999999999981,5,lira_attack_auc,lbp_strong
+Cora,GraphSAGE,lbp_equal_mass,lbp_strong,ece_test,0.016919999999999998,0.010134446210819813,0.008779999999999987,0.024099999999999993,5,ece_test,lbp_strong
+Cora,GraphSAGE,sami,lbp_strong,test_accuracy,0.16640000000000002,0.01618208886392608,0.15365100000000007,0.17858000000000002,5,test_accuracy,lbp_strong
+Cora,GraphSAGE,sami,lbp_strong,lira_attack_auc,-0.007240000000000024,0.004093042877859953,-0.010380000000000033,-0.004100000000000015,5,lira_attack_auc,lbp_strong
+Cora,GraphSAGE,sami,lbp_strong,ece_test,-0.014080000000000004,0.010973468002413816,-0.022261499999999993,-0.005800500000000115,5,ece_test,lbp_strong
+Cora,GraphSAGE,harp,none,test_accuracy,-0.045399999999999996,0.006476109943476866,-0.050019999999999995,-0.03968000000000001,5,test_accuracy,none
+Cora,GraphSAGE,lbp_equal_mass,none,test_accuracy,-0.0068400000000000015,0.0037600531911131264,-0.009820000000000006,-0.0038599999999999967,5,test_accuracy,none
+Cora,GraphSAGE,lbp_strong,none,test_accuracy,-0.1699,0.013252358280698559,-0.17951999999999999,-0.15862,5,test_accuracy,none
+Cora,GraphSAGE,sami,none,test_accuracy,-0.003499999999999992,0.00646993044784875,-0.009240000000000026,0.0002399999999999969,5,test_accuracy,none

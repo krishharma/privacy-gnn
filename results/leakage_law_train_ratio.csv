@@ -1,0 +1,5 @@
+dataset,model,spearman_ratio_vs_conf
+Citeseer,GCN,-0.956182887467515
+Citeseer,GraphSAGE,-0.956182887467515
+Cora,GCN,-0.956182887467515
+Cora,GraphSAGE,-0.956182887467515

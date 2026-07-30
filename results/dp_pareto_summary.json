@@ -1,0 +1,18 @@
+{
+  "grid_best_acc": 0.7823945829485996,
+  "selected": {
+    "noise_multiplier": 0.05,
+    "epochs": 150.0,
+    "lr": 0.1,
+    "acc_mean": 0.7823945829485996,
+    "acc_std": 0.007125784489252199,
+    "eps_mean": 1186.7300796533862
+  },
+  "eval_means": {
+    "acc": 0.7842333333333333,
+    "conf": 0.5403333333333333,
+    "lira": 0.5090666666666667,
+    "eps": 1186.7301
+  },
+  "disclaimer": "Naive per-parameter DP-SGD, not GAP. \u03b5 from crude accountant is typically vacuous at these Acc levels; point is Acc-competitive empirical Pareto, not a formal-privacy claim rivaling GAP."
+}

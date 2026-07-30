@@ -1,0 +1,8 @@
+{
+  "dataset": "ogbn-arxiv",
+  "n_nodes": 169343,
+  "n_edges": 2315598,
+  "api_qps_approx": 27236.1,
+  "device": "cpu",
+  "n_rows": 12
+}

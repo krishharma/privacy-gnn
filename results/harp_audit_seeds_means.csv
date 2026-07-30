@@ -1,0 +1,13 @@
+dataset,tag,test_accuracy,lira_attack_auc,noise_mass,frac_protected
+Actor,audit,0.3264,0.5615,953.9,0.4184
+Actor,lte,0.3273,0.5615,911.8,0.3999
+Actor,random,0.3185,0.5653,910.6,0.3994
+Chameleon,audit,0.4632,0.5608,276.5,0.4048
+Chameleon,lte,0.4515,0.5547,273.1,0.3998
+Chameleon,random,0.4665,0.5556,274.1,0.4013
+Citeseer,audit,0.7147,0.5397,399.3,0.4001
+Citeseer,lte,0.7158,0.548,398.9,0.3997
+Citeseer,random,0.7,0.54,398.9,0.3997
+Cora,audit,0.8304,0.528,323.2,0.3978
+Cora,lte,0.8357,0.5342,325.4,0.4006
+Cora,random,0.8175,0.5218,325.2,0.4003

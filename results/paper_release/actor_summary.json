@@ -1,0 +1,17 @@
+{
+  "n_seeds": 5,
+  "means": {
+    "test_accuracy": {
+      "none": 0.3347,
+      "sami": 0.3252
+    },
+    "conf_attack_auc": {
+      "none": 0.8754,
+      "sami": 0.7989
+    },
+    "lira_attack_auc": {
+      "none": 0.6049,
+      "sami": 0.5612
+    }
+  }
+}

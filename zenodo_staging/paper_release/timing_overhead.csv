@@ -1,0 +1,4 @@
+dataset,model,defense,wall_seconds,train_seconds,peak_python_mb,test_accuracy
+PubMed,GraphSAGE,none,6.94625997543335,6.4128,5.948530197143555,0.8795
+PubMed,GraphSAGE,sami,22.08476686477661,21.6378,6.242984771728516,0.8656
+PubMed,GraphSAGE,sami_no_gate,13.861570835113525,13.3573,6.215727806091309,0.868

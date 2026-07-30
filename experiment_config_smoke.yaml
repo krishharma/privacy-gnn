@@ -1,0 +1,48 @@
+# Fast smoke grid to validate SAMI / LBP / GTD / LiRA wiring.
+# PRIVACYGNN_CONFIG=experiment_config_smoke.yaml python run_final.py
+
+seeds: [42, 123]
+
+datasets:
+  - synthetic_low_sparse
+  - Cora
+
+models:
+  - GCN
+  - GraphSAGE
+
+attacks:
+  - confidence
+  - threshold
+  - shadow
+  - lira
+
+lira:
+  n_shadows: 3
+
+split:
+  train_ratio: 0.4
+  val_ratio: 0.2
+  test_ratio: 0.4
+
+defenses:
+  - name: none
+    params: {}
+  - name: sami
+    params: { lam: 0.5, use_lte: true, use_gate: true, beta: 0.0, warmup_epochs: 3 }
+  - name: lbp
+    params: { scale: 0.3 }
+  - name: gtd
+    params: { gamma: 1.0, stage1_frac: 0.5, pseudo_conf: 0.8 }
+  - name: sami_no_lte
+    params: { lam: 0.5, use_lte: false, use_gate: true, beta: 0.0, warmup_epochs: 3 }
+
+training:
+  epochs: 30
+  lr: 0.01
+  weight_decay: 0.0005
+
+device: cpu
+results_dir: results
+data_dir: data
+figures_dir: figures

@@ -1,0 +1,48 @@
+{
+  "dataset": "Computers",
+  "meta": {
+    "n_nodes": 13752,
+    "n_edges": 491722,
+    "num_classes": 10,
+    "num_features": 767
+  },
+  "homophily": 0.7772,
+  "means": {
+    "test_accuracy": {
+      "gtd": 0.5045,
+      "lbp": 0.4249,
+      "maskarmor": 0.7064,
+      "none": 0.7064,
+      "sami": 0.6506
+    },
+    "conf_attack_auc": {
+      "gtd": 0.5077,
+      "lbp": 0.5029,
+      "maskarmor": 0.5064,
+      "none": 0.5107,
+      "sami": 0.5057
+    },
+    "lira_attack_auc": {
+      "gtd": 0.5009,
+      "lbp": 0.5,
+      "maskarmor": 0.502,
+      "none": 0.4992,
+      "sami": 0.4996
+    },
+    "lira_tpr_at_0.01_fpr": {
+      "gtd": 0.0107,
+      "lbp": 0.01,
+      "maskarmor": 0.0018,
+      "none": 0.0097,
+      "sami": 0.0107
+    },
+    "train_seconds": {
+      "gtd": 32.5304,
+      "lbp": 38.2402,
+      "maskarmor": 33.536,
+      "none": 28.0494,
+      "sami": 118.4556
+    }
+  },
+  "note": "Amazon Computers multi-k grid; Volume\u00d7Variety bridge when products unavailable."
+}

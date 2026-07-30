@@ -1,0 +1,11 @@
+{
+  "n_nodes": 2708,
+  "harp_release_ms": 0.5070074996910989,
+  "lbp_strong_release_ms": 0.7149899983778596,
+  "lbp_eq_release_ms": 0.6558199995197356,
+  "sami_release_ms": 0.33984168199822307,
+  "harp_qps_proxy": 5341143.871934607,
+  "lbp_qps_proxy": 3787465.5675517153,
+  "frac_protected": 0.40066469719350073,
+  "noise_mass_harp": 325.5
+}

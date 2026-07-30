@@ -1,0 +1,33 @@
+{
+  "attempted": "ogbn-products",
+  "status": "systems_only_complete",
+  "n_nodes": 2449029,
+  "full_mia": "OOM exit 137 (n_shadows=1 and n_shadows=2)",
+  "systems_only": "results/ogbn_products_systems_only.json",
+  "summary": {
+    "status": "systems_only_ok",
+    "dataset": "ogbn-products",
+    "defense": "none",
+    "epochs": 5,
+    "batch_size": 256,
+    "num_neighbors": [
+      10,
+      5
+    ],
+    "train_seconds": 182.36,
+    "test_accuracy_subsample": 0.6948,
+    "n_eval": 50000,
+    "eval_mode": "neighborloader_subsample",
+    "api_qps_approx": 3316.8885170993663,
+    "peak_rss_mb": 7374.3,
+    "note": "Full MIA (conf/LiRA) OOMs on 16GB host; systems+subsample Acc only.",
+    "n_nodes": 2449029,
+    "n_edges": 123718152,
+    "num_classes": 47,
+    "num_features": 100,
+    "train_n": 196615,
+    "val_n": 39323,
+    "test_n": 2213091,
+    "rss_mb_after_load": 5640.0
+  }
+}

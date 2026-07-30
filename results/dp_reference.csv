@@ -1,0 +1,4 @@
+dataset,model,defense,seed,test_accuracy,conf_attack_auc,lira_attack_auc,gap_attack_auc,dp_epsilon,noise_multiplier,epochs,lr,note
+Cora,GraphSAGE,dp_sgd_pareto,42,0.783,0.5693,0.5161,0.5286,1186.7301,0.05,150,0.1,Naive DP-SGD (not GAP); Acc-tuned Pareto point with honest vacuous-ish ε.
+Cora,GraphSAGE,dp_sgd_pareto,123,0.7775,0.5515,0.5155,0.5355,1186.7301,0.05,150,0.1,Naive DP-SGD (not GAP); Acc-tuned Pareto point with honest vacuous-ish ε.
+Cora,GraphSAGE,dp_sgd_pareto,456,0.7922,0.5002,0.4956,0.518,1186.7301,0.05,150,0.1,Naive DP-SGD (not GAP); Acc-tuned Pareto point with honest vacuous-ish ε.

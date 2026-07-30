@@ -1,0 +1,45 @@
+# Smoke config for ogbn-arxiv wall-clock gate (1 seed, 1 LiRA shadow).
+project_name: PrivacyGNN_ogbn_smoke
+data_dir: ./data
+results_dir: ./results
+figures_dir: ./figures
+device: cpu
+seed: 42
+config_hash: ogbn_smoke_v1
+
+datasets:
+  - ogbn-arxiv
+
+models:
+  - GraphSAGE
+
+defenses:
+  - name: none
+    params: {}
+
+attacks:
+  - confidence
+  - lira
+
+lira:
+  n_shadows: 1
+
+minibatch:
+  batch_size: 1024
+  num_neighbors: [15, 10]
+
+large_graph_use_official_split: true
+
+training:
+  epochs: 20
+  lr: 0.01
+  weight_decay: 5e-4
+  hidden: 64
+
+split:
+  train_ratio: 0.4
+  val_ratio: 0.2
+  test_ratio: 0.4
+
+multi_query_k: 1
+run_mlp_phi_attack: false

@@ -1,0 +1,51 @@
+{
+  "frozen_at_utc": "2026-07-25T22:32:55.321789+00:00",
+  "config_path": "experiment_config_confirmatory.yaml",
+  "config_hash": "eac9960f8ba0",
+  "core_results_sha256_16": "292eee2cc9eba56e",
+  "n_rows": 520,
+  "datasets": [
+    "Citeseer",
+    "Cora",
+    "PubMed",
+    "synthetic_high_dense",
+    "synthetic_low_medium",
+    "synthetic_low_sparse"
+  ],
+  "defenses": [
+    "advreg",
+    "dropedge",
+    "gtd",
+    "label_smoothing",
+    "lbp",
+    "none",
+    "sami",
+    "sami_no_adv",
+    "sami_no_gate",
+    "sami_no_lte",
+    "sami_temp_only"
+  ],
+  "reproduce": [
+    "./venv/bin/python run_core_tables.py",
+    "./venv/bin/python run_scml_expanded.py",
+    "./venv/bin/python run_mia_eval_standard.py",
+    "./venv/bin/python run_sami_budget_protocol.py",
+    "./venv/bin/python run_ogbn_smoke.py",
+    "./venv/bin/python run_ogbn_volume.py",
+    "./venv/bin/python run_highrisk_volume_synth.py",
+    "./venv/bin/python build_spab_release.py",
+    "./venv/bin/python freeze_paper_release.py"
+  ],
+  "notes": {
+    "primary_claim": "SPAB conditional audit (primary) + supporting regularity + one defense (SAMI).",
+    "gcn_hardcell": "See gcn_hardcell_best.json (honest mixed / architecture modulation).",
+    "ogbn_arxiv": "Volume negative control + systems; Volume-safe GTD Acc\u2248none.",
+    "volume_x_leakage": "n=3k low-h/low-SNR GCN; see volume_highrisk_synth_summary.json.",
+    "actor_variety": "5-seed high-risk cell; actor_summary.json.",
+    "cora_lira_n8": "Stronger-shadow citation check; cora_lira_n8_summary.json.",
+    "spab_report": "results/spab_report.csv matches paper 1:1.",
+    "sami_vs_gtd": "WIN on Cora GraphSAGE joint metrics.",
+    "defense_aware_shadows": true,
+    "n_shadows": "Citation/Actor=4; Cora check=8; ogbn=2 (smoke wall-clock)."
+  }
+}

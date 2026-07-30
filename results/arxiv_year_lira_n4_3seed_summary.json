@@ -1,0 +1,67 @@
+{
+  "purpose": "Fill large+heterophilic regime cell (matched Volume peer to ogbn-arxiv)",
+  "dataset": "arxiv-year",
+  "n_shadows": 4,
+  "seeds": [
+    42,
+    123,
+    456
+  ],
+  "defenses": [
+    "none"
+  ],
+  "device": "cpu",
+  "split_protocol": "linkx_50_25_25_seed0",
+  "means": {
+    "homophily": {
+      "none": 0.2182
+    },
+    "test_accuracy": {
+      "none": 0.3946
+    },
+    "conf_attack_auc": {
+      "none": 0.5006
+    },
+    "lira_attack_auc": {
+      "none": 0.5014
+    },
+    "lira_tpr_at_0.01_fpr": {
+      "none": 0.0093
+    },
+    "wall_seconds": {
+      "none": 785.25
+    }
+  },
+  "per_seed": [
+    {
+      "seed": 42,
+      "homophily": 0.2182,
+      "test_accuracy": 0.3924,
+      "conf_attack_auc": 0.5009,
+      "lira_attack_auc": 0.5031,
+      "wall_seconds": 818.03
+    },
+    {
+      "seed": 123,
+      "homophily": 0.2182,
+      "test_accuracy": 0.3971,
+      "conf_attack_auc": 0.5025,
+      "lira_attack_auc": 0.5007,
+      "wall_seconds": 836.07
+    },
+    {
+      "seed": 456,
+      "homophily": 0.2182,
+      "test_accuracy": 0.3942,
+      "conf_attack_auc": 0.4984,
+      "lira_attack_auc": 0.5003,
+      "wall_seconds": 701.65
+    }
+  ],
+  "compare_to_ogbn_arxiv_none_n4": {
+    "homophily": 0.654,
+    "acc": 0.666,
+    "lira": 0.503
+  },
+  "note": "Same citation graph as ogbn-arxiv; year-quantile labels (5 bins, LINKX). Canonical target split = fixed 50/25/25 seed 0; shadows use random resplits."
+}

@@ -1,0 +1,2 @@
+dataset,model,defense,baseline,metric,delta_mean,delta_std,ci_low,ci_high,n_seeds
+ogbn-arxiv,GraphSAGE,harp,lbp,test_accuracy,0.42026666666666673,0.005270041113059094,0.41440000000000005,0.42460000000000003,3

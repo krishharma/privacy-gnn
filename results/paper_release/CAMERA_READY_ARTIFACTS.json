@@ -1,0 +1,9 @@
+{
+  "camera_ready_sync": true,
+  "includes_scale_ladder": true,
+  "includes_aggressive_sami": true,
+  "includes_canary_citeseer": true,
+  "includes_pubmed_shadow_sweep": true,
+  "computers_acc_canonical": 0.706,
+  "note": "Computers Acc in scale tables synced from computers_baselines run_one grid."
+}

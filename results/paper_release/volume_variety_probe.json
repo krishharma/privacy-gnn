@@ -1,0 +1,14 @@
+{
+  "purpose": "Volume\u00d7Variety probe log for IEEE BigData SPAB",
+  "ogbn_official": "Volume negative control; conf/LiRA near chance",
+  "ogbn_resplit_40_20_40": "Still near-chance (conf\u22480.50); scale\u2260leakage",
+  "ogbn_featnoise": "Acc collapses (~0.06); not a useful leaky Volume cell",
+  "synth_n10k_low_sparse_snr0.25_sage": "Acc\u22481.0, conf\u22480.50\u20130.53; \u03c6-gap closed",
+  "primary_high_risk_multik": {
+    "dataset": "Actor",
+    "n_nodes": "~7600",
+    "artifact": "results/actor_summary.json",
+    "note": "Heterophilic Variety at multi-thousand-node scale; 5 seeds"
+  },
+  "recommendation": "Paper: ogbn = Volume negative control + systems; Actor = Variety high-risk; do not force a fake leaky ogbn resplit."
+}

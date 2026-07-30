@@ -1,0 +1,30 @@
+{
+  "natural_topdecile": {
+    "none": {
+      "acc": 0.8784241305016929,
+      "pop_lira": 0.5702346939906504,
+      "topdecile_lira": 0.577151514176516,
+      "canary_lira": null
+    },
+    "sami": {
+      "acc": 0.8722683902739305,
+      "pop_lira": 0.5102186424574988,
+      "topdecile_lira": 0.4923872986804427,
+      "canary_lira": null
+    }
+  },
+  "planted": {
+    "none": {
+      "acc": 0.8784241305016929,
+      "pop_lira": 0.5679879624869305,
+      "topdecile_lira": 0.5768540437897519,
+      "canary_lira": 0.5374586411203447
+    },
+    "sami": {
+      "acc": 0.8728839642967067,
+      "pop_lira": 0.5121034471292679,
+      "topdecile_lira": 0.49864752048355504,
+      "canary_lira": 0.49080967220683286
+    }
+  }
+}

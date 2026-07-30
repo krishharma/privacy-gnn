@@ -1,0 +1,1 @@
+SCML (synthetics, n=6): R²=0.998, Spearman=1.000. Architecture gap vs heterophily Spearman=0.657. Actor vs PubMed order correct=True (pred 0.781 vs 0.198; obs 0.875 vs 0.504). Mean accuracy drop when removing LTE=0.095.

@@ -1,0 +1,41 @@
+{
+  "dataset": "ogbn-arxiv",
+  "model": "GraphSAGE",
+  "defense": "none",
+  "seed": 42,
+  "n_shadows_smoke": 1,
+  "device": "cpu",
+  "wall_seconds_target_plus_1shadow": 154.2,
+  "train_seconds_target": 79.7953,
+  "test_accuracy": 0.6629,
+  "conf_attack_auc": 0.5221,
+  "lira_attack_auc": 0.5,
+  "peak_python_alloc_mb": 68.9,
+  "peak_rss_mb": 998.0,
+  "projections": {
+    "n_shadows_1": {
+      "hours_est_4def_3seeds": 0.514,
+      "hours_est_4def_5seeds": 0.857
+    },
+    "n_shadows_2": {
+      "hours_est_4def_3seeds": 0.771,
+      "hours_est_4def_5seeds": 1.285
+    },
+    "n_shadows_4": {
+      "hours_est_4def_3seeds": 1.285,
+      "hours_est_4def_5seeds": 2.142
+    }
+  },
+  "policy": {
+    "n_shadows": 4,
+    "n_seeds": 5,
+    "defenses": [
+      "none",
+      "sami",
+      "gtd",
+      "lbp"
+    ],
+    "maskarmor": false,
+    "note": "Sized so confirmatory Volume grid stays within ~12\u201318h CPU budget."
+  }
+}

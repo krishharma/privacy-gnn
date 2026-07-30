@@ -1,0 +1,24 @@
+{
+  "purpose": "Volume\u00d7leakage: n=3k GCN low-h/sparse/low-SNR, imperfect Acc",
+  "dataset": "synthetic_low_sparse_snr0.05_n3000_h0.15",
+  "n_seeds": 3,
+  "n_shadows": 4,
+  "summary_means": {
+    "test_accuracy": {
+      "none": 0.2911,
+      "sami": 0.2611
+    },
+    "conf_attack_auc": {
+      "none": 0.7936,
+      "sami": 0.6817
+    },
+    "lira_attack_auc": {
+      "none": 0.4937,
+      "sami": 0.5019
+    },
+    "gen_gap": {
+      "none": 0.4139,
+      "sami": 0.2419
+    }
+  }
+}

@@ -27,3 +27,13 @@ results/*.partial.csv
 venv/
 .env
 *.env
+
+# Experiment logs and regenerable caches
+results/*.log
+results/*_only.log
+results/products_sub_*.pt
+*.pt
+!artifact/**/*.py
+paper/*.aux
+paper/*.bbl
+paper/*.blg

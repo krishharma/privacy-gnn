@@ -12,10 +12,10 @@ def train_gnn(model, data, device, epochs=50, lr=0.01, weight_decay=5e-4,
               edge_sparsify_rate=0.0):
     """
     Train the GNN on the given data.
-    - early_stop_patience: stop when validation loss does not improve for this many epochs.
+    - early_stop_patience: stop when validation (or train) loss does not improve.
     - label_smoothing: smoothing factor for target distribution.
     - dropedge_rate: fraction of edges to drop at each epoch (DropEdge).
-    - edge_sparsify_rate: fraction of edges to remove once before training (edge sparsification).
+    - edge_sparsify_rate: fraction of edges to remove once before training.
     """
     data = data.to(device)
     model = model.to(device)
@@ -29,18 +29,23 @@ def train_gnn(model, data, device, epochs=50, lr=0.01, weight_decay=5e-4,
     best_loss = 1e9
     patience_count = 0
     best_state = None
+    val_mask = getattr(data, "val_mask", None)
+    use_val = val_mask is not None and bool(val_mask.any())
 
     model.train()
     for epoch in range(epochs):
         optimizer.zero_grad()
-        # Apply DropEdge during training if requested
         ei = drop_edges(edge_index, dropedge_rate) if dropedge_rate > 0 else edge_index
         out = model(data.x, ei)
 
         if label_smoothing > 0:
             log_p = F.log_softmax(out[data.train_mask], 1)
             smooth = torch.full_like(log_p, label_smoothing / num_classes)
-            smooth.scatter_(1, data.y[data.train_mask].unsqueeze(1), 1 - label_smoothing + label_smoothing / num_classes)
+            smooth.scatter_(
+                1,
+                data.y[data.train_mask].unsqueeze(1),
+                1 - label_smoothing + label_smoothing / num_classes,
+            )
             loss = -(smooth * log_p).sum(1).mean()
         else:
             loss = F.cross_entropy(out[data.train_mask], data.y[data.train_mask])
@@ -49,8 +54,13 @@ def train_gnn(model, data, device, epochs=50, lr=0.01, weight_decay=5e-4,
         optimizer.step()
 
         if early_stop_patience is not None:
-            if loss.item() < best_loss - 1e-4:
-                best_loss = loss.item()
+            with torch.no_grad():
+                if use_val:
+                    monitor = F.cross_entropy(out[val_mask], data.y[val_mask]).item()
+                else:
+                    monitor = loss.item()
+            if monitor < best_loss - 1e-4:
+                best_loss = monitor
                 patience_count = 0
                 best_state = {k: v.clone() for k, v in model.state_dict().items()}
             else:

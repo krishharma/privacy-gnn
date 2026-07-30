@@ -1,0 +1,33 @@
+{
+  "best_params": {
+    "lam": 0.5,
+    "use_lte": true,
+    "use_gate": true,
+    "arch_aware": true,
+    "noise_scale": 0.35,
+    "budget_B": 0.0,
+    "warmup_epochs": 5,
+    "entropy_coef": 0.05
+  },
+  "select_score": 0.829975,
+  "framing": "WIN",
+  "sami_means": {
+    "variant": "sami_best",
+    "test_accuracy": 0.8734999999999999,
+    "conf_attack_auc": 0.5625,
+    "lira_attack_auc": 0.5096,
+    "conf_tpr_at_0.01_fpr": 0.0031399999999999996,
+    "gap_attack_auc": 0.55446
+  },
+  "gtd_means": {
+    "variant": "gtd",
+    "test_accuracy": 0.8759,
+    "conf_attack_auc": 0.58472,
+    "lira_attack_auc": 0.53824,
+    "conf_tpr_at_0.01_fpr": 0.01386,
+    "gap_attack_auc": 0.56188
+  },
+  "wins_on_privacy_metrics": 3,
+  "fallback_claim": "SAMI dominates the joint accuracy\u2013LiRA frontier and does not inflate LiRA (unlike LBP); GTD may be marginally better on confidence alone but is structure-blind and lacks risk-budget allocation.",
+  "win_claim": "On Cora GraphSAGE, SAMI beats GTD on \u22652 of {conf, LiRA, TPR@1%FPR} at matched-or-better accuracy."
+}

@@ -1,0 +1,9 @@
+{
+  "n_shadows": 4,
+  "seed": 42,
+  "acc": 0.6629,
+  "conf": 0.5221,
+  "lira": 0.5049,
+  "wall_s": 569.5,
+  "note": "Appendix check: LiRA still near chance at n_shadows=4 \u2014 suggests true negative control under this protocol, not solely underpowered n=2."
+}

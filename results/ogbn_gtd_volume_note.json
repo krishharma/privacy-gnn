@@ -1,0 +1,10 @@
+{
+  "gtd_volume_mode": "stage1_only_ce",
+  "reason": "NeighborLoader unlabeled pseudo-label stage collapsed Acc~0.47; Volume-safe CE restores Acc~none (0.664 vs 0.666).",
+  "means": {
+    "acc": 0.664,
+    "conf": 0.526,
+    "lira": 0.501,
+    "train_s": 197
+  }
+}

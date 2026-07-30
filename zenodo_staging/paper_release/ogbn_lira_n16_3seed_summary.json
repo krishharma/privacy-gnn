@@ -1,0 +1,61 @@
+{
+  "tier": "A",
+  "purpose": "Shadow-scaling credibility: classic LiRA n_shadows=16 on Volume null (ogbn-arxiv)",
+  "n_shadows": 16,
+  "seeds": [
+    42,
+    123,
+    456
+  ],
+  "defenses": [
+    "none"
+  ],
+  "device": "cpu",
+  "split_protocol": "ogb_official",
+  "means": {
+    "test_accuracy": {
+      "none": 0.666
+    },
+    "conf_attack_auc": {
+      "none": 0.5274
+    },
+    "lira_attack_auc": {
+      "none": 0.5096
+    },
+    "lira_tpr_at_0.01_fpr": {
+      "none": 0.0092
+    },
+    "wall_seconds": {
+      "none": 1172.08
+    }
+  },
+  "per_seed": [
+    {
+      "seed": 42,
+      "test_accuracy": 0.6629,
+      "conf_attack_auc": 0.5221,
+      "lira_attack_auc": 0.5088,
+      "wall_seconds": 1087.94
+    },
+    {
+      "seed": 123,
+      "test_accuracy": 0.6661,
+      "conf_attack_auc": 0.5302,
+      "lira_attack_auc": 0.508,
+      "wall_seconds": 1251.73
+    },
+    {
+      "seed": 456,
+      "test_accuracy": 0.6691,
+      "conf_attack_auc": 0.5299,
+      "lira_attack_auc": 0.512,
+      "wall_seconds": 1176.57
+    }
+  ],
+  "compare_to_prior": {
+    "n2_systems_grid_none_lira": 0.502,
+    "n4_credibility_none_lira": 0.503,
+    "n4_credibility_none_acc": 0.666
+  },
+  "note": "Official OGB split; undefended GraphSAGE only (Tier A). Addresses reviewer concern that n_shadows<=4 Volume nulls are underpowered vs classic LiRA 16+."
+}

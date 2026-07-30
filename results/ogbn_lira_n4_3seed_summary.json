@@ -1,0 +1,27 @@
+{
+  "n_shadows": 4,
+  "seeds": [
+    42,
+    123,
+    456
+  ],
+  "means": {
+    "test_accuracy": {
+      "none": 0.666,
+      "sami": 0.6426
+    },
+    "conf_attack_auc": {
+      "none": 0.5274,
+      "sami": 0.5275
+    },
+    "lira_attack_auc": {
+      "none": 0.503,
+      "sami": 0.5028
+    },
+    "wall_seconds": {
+      "none": 614.0733,
+      "sami": 617.21
+    }
+  },
+  "note": "Official OGB split; LiRA n=4 \u00d7 3 seeds for none+SAMI. Negative control credibility check."
+}

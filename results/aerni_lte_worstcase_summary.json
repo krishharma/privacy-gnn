@@ -1,0 +1,55 @@
+{
+  "topdecile_means": {
+    "Cora": {
+      "none_topdecile_conf_auroc": 0.5511255524129308,
+      "sami_topdecile_conf_auroc": 0.3681827844050061,
+      "delta": -0.18294276800792467
+    },
+    "Citeseer": {
+      "none_topdecile_conf_auroc": 0.6418910485161599,
+      "sami_topdecile_conf_auroc": 0.4756789961665447,
+      "delta": -0.16621205234961525
+    },
+    "Actor": {
+      "none_topdecile_conf_auroc": 0.8148577132167393,
+      "sami_topdecile_conf_auroc": 0.6413005817721364,
+      "delta": -0.17355713144460272
+    },
+    "Chameleon": {
+      "none_topdecile_conf_auroc": 0.8234788159494378,
+      "sami_topdecile_conf_auroc": 0.6821705631623883,
+      "delta": -0.14130825278704948
+    }
+  },
+  "spearman_ci": {
+    "Cora": {
+      "spearman": 0.06024316654511799,
+      "pvalue": 0.005036899661114609,
+      "ci_lo": 0.017402599514402785,
+      "ci_hi": 0.10300239961817839,
+      "n": 2166
+    },
+    "Citeseer": {
+      "spearman": 0.12715747450333909,
+      "pvalue": 4.570422174657971e-11,
+      "ci_lo": 0.08998969589471914,
+      "ci_hi": 0.16398323230380396,
+      "n": 2662
+    },
+    "Actor": {
+      "spearman": -0.010569322625425231,
+      "pvalue": 0.4099454256864599,
+      "ci_lo": -0.03517398313156216,
+      "ci_hi": 0.014648519489332955,
+      "n": 6080
+    },
+    "Chameleon": {
+      "spearman": -0.06554357022685034,
+      "pvalue": 0.005129130675025222,
+      "ci_lo": -0.11321459278523065,
+      "ci_hi": -0.021514950793735457,
+      "n": 1822
+    }
+  },
+  "note": "Vulnerable-subset = top-decile LTE train members vs all test non-members; conf AUROC (not full shadow LiRA). Spearman CI = node bootstrap on one undefended GraphSAGE (seed 42)."
+}
