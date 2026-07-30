@@ -1,4 +1,4 @@
-# HARP: Hop-Aware Selective Release for Privacy-Audited GNN Prediction APIs
+# HARP: A Selective Release Framework for Privacy-Audited GNN Prediction APIs
 
 Artifact for the IEEE BigData 2026 submission.
 

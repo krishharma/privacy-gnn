@@ -38,7 +38,7 @@
 
 \begin{document}
 
-\title{HARP: Hop-Aware Selective Release\\
+\title{HARP: A Selective Release Framework\\
 for Privacy-Audited GNN Prediction APIs}
 
 \author{\IEEEauthorblockN{Krish Sharma}
@@ -58,74 +58,67 @@ shaikh.arifuzzaman@unlv.edu}
 \maketitle
 
 \begin{abstract}
-Graph neural networks are increasingly served as prediction APIs: clients query a node and receive a softmax score vector used for ranking, routing, and analytics on graphs from thousands to millions of nodes.
-At this scale the API is a continuous data product---operators must keep accuracy high, keep most responses bit-exact for caching and compliance, and remain \emph{audit-compliant} under membership inference checks.
-Uniform Laplace posterior perturbation (LBP) cannot meet that joint goal: any $b{>}0$ perturbs \emph{every} response, so a clean-majority constraint is infeasible by construction.
-We formalize this as \emph{constrained score release}---maximize accuracy subject to a membership audit and a minimum exact-response fraction---and propose \textbf{HARP}, a selective release framework for GNN score APIs.
-\textbf{HARP is not proposed as a stronger membership defense than uniform noise}; it is the mechanism that can satisfy a clean-majority constraint while remaining audit-compliant and recovering accuracy versus published strong LBP.
-HARP ranks nodes (topology or audit-guided vulnerability), expands high-risk seeds by $k$ hops, and applies a protector only on that set, with Frac/Mass dials and a session budget against re-query averaging.
-Across six graphs, GAT/inductive checks, ogbn-arxiv (${\sim}169$k) with defense-aware LiRA, and an ogbn-products subsampled audit (${\sim}15$k of $2.4$M), HARP recovers large accuracy drops versus strong LBP while enabling a $60\%$ clean majority that uniform noise cannot provide.
+GNN prediction APIs release softmax scores used for ranking, routing, and analytics on graphs from thousands to millions of nodes.
+At this scale the API is a continuous data product: operators need high accuracy, a majority of \emph{bit-exact} responses for caching and compliance (Veracity), and membership-audit compliance---while clients may re-query randomized answers (Velocity).
+Uniform Laplace posterior perturbation (LBP), the standard release defense, cannot meet that joint goal: any $b{>}0$ perturbs \emph{every} response (ExactFrac${=}0$), and strong LBP collapses accuracy (e.g., $0.666\rightarrow 0.179$ on ogbn-arxiv).
+We propose \textbf{HARP}, a hop-aware selective release \emph{framework} for GNN score APIs, together with a topology risk constructor (LTE) that ranks seeds and expands them by $k$ hops before applying a pluggable protector only on the protected set.
+Frac, Mass, and session budget $B$ are first-class operator dials---release-side analogues of memory and batch budgets in training systems.
+Across six graphs and OGB scale-ups (${\sim}169$k--$2.4$M nodes), HARP recovers up to $+42$ Acc points versus published strong LBP, cuts release Mass by $60\%$, enables a $60\%$ clean majority that uniform noise cannot provide, and raises score-cache hit rates from $0\%$ (fresh LBP) to $54\%$ from ExactFrac alone.
+HARP is an audit-driven release policy---not a differential-privacy replacement.
 \end{abstract}
 
 \begin{IEEEkeywords}
-graph neural networks, prediction APIs, Big Data systems, selective release, data quality, membership inference
+graph neural networks, prediction APIs, Big Data systems, selective release, data quality, API serving
 \end{IEEEkeywords}
 
 \section{Introduction}
 
 \subsection{Motivation}
-Graph neural networks (GNNs) are widely deployed as \emph{prediction APIs}: a client queries a node ID and receives a softmax score vector~\cite{kipf2017gcn,hamilton2017graphsage}.
-Those scores drive ranking, triage, and analytics.
-They also leak whether a node was in the training set, via membership inference attacks (MIAs)~\cite{shokri2017membership,salem2019mlleaks,carlini2022membership,olatunji2021mia}.
+GNN prediction APIs return softmax score vectors for ranking, triage, and analytics~\cite{kipf2017gcn,hamilton2017graphsage}.
+At Big Data scale the API is not a one-shot model export---it is a high-volume stream of released probabilities with three operator constraints:
+\textbf{Volume} (graphs from $10^3$ to $10^6+$ nodes),
+\textbf{Velocity} (clients may re-query randomized answers),
+and \textbf{Veracity} (pipelines need bit-exact, well-calibrated scores for caching, A/B tests, and compliance).
+Those scores also leak training membership via MIAs~\cite{shokri2017membership,salem2019mlleaks,carlini2022membership,olatunji2021mia}.
 
-At Big Data scale the API is not a one-shot model export.
-It is a stream of released probabilities.
-Operators therefore face three systems concerns:
-\textbf{volume} (graphs from $10^3$ to $10^6+$ nodes),
-\textbf{velocity} (clients may re-query randomized answers),
-and \textbf{veracity} (many pipelines need stable, well-calibrated scores for caching, A/B tests, and compliance).
+The usual release defense is uniform Laplace posterior perturbation (LBP)~\cite{olatunji2021mia}.
+It creates a hard systems failure under Veracity: any $b{>}0$ yields ExactFrac${=}0$, so score caches miss on every fresh draw, and strong LBP ($b{=}0.3$) further collapses Acc (ogbn-arxiv: $0.666\rightarrow 0.179$).
+Weaker uniform noise keeps Acc but still perturbs every node.
+Neither option provides a \emph{clean majority} of exact scores---the data-quality analogue of fitting a large graph into limited GPU memory.
 
-The usual graph defense is Laplace posterior perturbation (LBP)~\cite{olatunji2021mia}.
-Strong uniform noise ($b{=}0.3$) lowers attack success but often collapses accuracy.
-Weaker noise keeps accuracy but still perturbs \emph{every} node and raises expected calibration error (ECE).
-Neither option yields a \emph{clean majority} of exact scores---a concrete data-quality property for downstream consumers.
+\paragraph{Systems problem.}
+Serve GNN scores so as to maximize Acc subject to a membership audit \emph{and} ExactFrac$\ge c{>}0$.
+Uniform LBP is infeasible for $c{>}0$ by construction (Remark~\ref{rem:uniform-infeasible}).
 
-The systems question is therefore \textbf{constrained budget allocation}: maximize task accuracy subject to a membership audit \emph{and} a minimum fraction of bit-exact responses.
+\paragraph{Framework + algorithm.}
+We propose \textbf{HARP}, a selective release \emph{framework}, with a hop-aware risk constructor (\textbf{LTE}) that ranks nodes from topology, selects seeds to hit a target Frac, and expands them by $k$ hops so message passing cannot reintroduce cues through clean neighbors.
+A pluggable protector (strong Laplace or masking) runs only on $\mathcal{P}_k$; Frac/Mass/\(B\) are logged like training memory and batch budgets.
+Under locked Frac${=}0.40$, about $60\%$ of responses stay bit-exact---impossible for any uniform $b{>}0$.
 
-\paragraph{Main idea.}
-Membership signal on graphs is not node-local: message passing mixes neighborhoods.
-HARP (Hop-Aware selective Release Policy) ranks nodes with a cheap topology estimator (LTE) or an audit-guided vulnerability score, expands high-risk seeds by $k$ hops into a protected set $\mathcal{P}_k$, and applies a protector (strong Laplace or selective masking) \emph{only} on that set.
-Under our locked setting (protected fraction Frac${=}0.40$), about $60\%$ of API responses stay bit-exact---impossible for any uniform $b{>}0$.
+\paragraph{Headline quantitative wins.}
+Versus published strong LBP: up to $+42$ Acc points on ogbn-arxiv and $+12.5$ on Cora; $60\%$ lower Mass; ExactFrac${=}0.60$; score-cache hits $0\%\rightarrow 54\%$ from ExactFrac alone (fresh LBP vs.\ HARP).
+These are the systems answers to ``why accept this?''---not a claim of lower LiRA than uniform noise when ExactFrac${=}0$.
 
 \subsection{Gap}
 Prior defenses include LBP~\cite{olatunji2021mia}, MemGuard~\cite{jia2019memguard}, train-time GNN MIA methods (GTD, MaskArmor)~\cite{gtd2024,maskarmor2024}, AdvReg~\cite{nasr2018advreg}, and training-time DP-GNNs~\cite{sajadmanesh2023gap,napgnn2023,abadi2016deepdp,dwork2006dp}.
 MemGuard and uniform LBP both perturb every response; train-time methods do not expose Mass/Frac release accounting.
-None treat ExactFrac$\ge c{>}0$ as a hard systems constraint on a hop-coupled GNN API, nor expose constructor$\times$protector dials under matched-budget audits.
-HARP targets that systems gap---reusing known protectors inside a new allocation problem.
+None treat ExactFrac$\ge c{>}0$ as a hard systems constraint on a hop-coupled GNN API with operator dials analogous to memory/batch budgets.
+HARP targets that gap: a release \emph{framework} that reuses known protectors inside a new allocation problem.
 
-\paragraph{Running example.}
-On Cora ($n{=}2708$), strong LBP cuts accuracy from ${\approx}0.88$ to ${\approx}0.71$.
-Weak uniform noise preserves accuracy but perturbs every score (ECE ${\approx}0.16$).
-HARP matches that weak-noise budget, keeps ${\approx}60\%$ of scores exact, reaches ECE ${\approx}0.033$ and Acc ${\approx}0.83$, and only modestly changes membership-attack AUROC.
-The operator gains usable accuracy and reproducible scores for most queries---not a claim that clean nodes are ``membership-safe.''
+\paragraph{Running example (Cora).}
+Strong LBP cuts Acc ${\approx}0.88\rightarrow 0.71$; weak uniform noise preserves Acc but ExactFrac${=}0$ (ECE ${\approx}0.16$).
+HARP at matched Mass keeps ExactFrac${=}0.60$, Acc ${\approx}0.83$, ECE ${\approx}0.033$---usable accuracy plus reproducible scores for most queries.
 
-\paragraph{Non-goal (stated up front).}
-HARP is \emph{not} a claim of lower population LiRA than equal-mass or strong uniform LBP.
-When ExactFrac$=0$ is allowed, uniform noise is often the better Acc--LiRA point.
-HARP's claim is narrower and systems-shaped: it is the feasible class of policies under ExactFrac$\ge c{>}0$, with hop-consistent allocation, operator dials, and Acc/calibration recovery versus the published strong-LBP recipe.
-
-\paragraph{Novelty (what is new).}
-The conceptual contribution is the \emph{problem}, not a new noise distribution.
-Prior release defenses answer ``how to perturb a score''; HARP answers ``how to allocate a release budget on a message-passing API when a clean majority is mandatory.''
-Laplace and masking are interchangeable \emph{protectors}---pluggable baselines, not the invention.
-What is new is constrained score release with ExactFrac as a first-class constraint, hop-consistent protected-set geometry, and Mass/Frac/\(B\) telemetry under matched-budget audits.
+\paragraph{Non-goal.}
+HARP is not a stronger Acc--LiRA defense than equal-mass LBP when ExactFrac${=}0$ is allowed.
+The claim is ExactFrac feasibility, Acc recovery vs.\ strong LBP, and operator telemetry under that constraint.
 
 \subsection{Contributions and paper map}
 \begin{enumerate}
-  \item \textbf{Constrained score release.} Formalize maximize Acc s.t.\ LiRA$\le\tau$ and ExactFrac$\ge c$; show uniform LBP is infeasible for $c{>}0$ (Remark~\ref{rem:uniform-infeasible}); establish hop-consistency under one-hop mixing (Prop.~\ref{thm:hop-necessary}) and selective local-$\varepsilon$ accounting (Prop.~\ref{thm:local-eps}).
-  \item \textbf{Selective release framework.} Constructor$\times$protector$\times$Mass/Frac$\times$session budget $B$, with $O(|E|+n\log n)$ setup (Prop.~\ref{thm:harp-complexity}).
-  \item \textbf{Systems headline.} Versus strong LBP: $+12.5$ Acc on Cora at Frac${=}0.40$; versus equal-mass: a $60\%$ clean majority and ${\sim}5{\times}$ lower ECE \emph{on Cora}; quantified cache-hit simulation for ExactFrac; portable clean-slice fidelity.
-  \item \textbf{Scale audits.} ogbn-arxiv Acc recovery with defense-aware LiRA ($n_{\mathrm{sh}}{\in}\{2,4\}$); ogbn-products systems probe plus subsampled LiRA on a $15$k-node induced subgraph~\cite{hu2020ogb}.
+  \item \textbf{Systems headline.} Versus strong LBP: up to $+42$ Acc on ogbn-arxiv and $+12.5$ on Cora; $60\%$ lower Mass; ExactFrac${=}0.60$; cache hits $0\%\rightarrow 54\%$ from ExactFrac alone; ${\sim}5{\times}$ lower ECE \emph{on Cora} at matched Mass.
+  \item \textbf{HARP framework + LTE constructor.} Constructor$\times$protector$\times$Mass/Frac$\times$session budget $B$, with hop-consistent protected sets and $O(|E|+n\log n)$ setup (Prop.~\ref{thm:harp-complexity}).
+  \item \textbf{Constrained score release.} Formalize Acc s.t.\ LiRA$\le\tau$ and ExactFrac$\ge c$; Uniform LBP infeasible for $c{>}0$ (Remark~\ref{rem:uniform-infeasible}); hop-consistency (Prop.~\ref{thm:hop-necessary}); selective local-$\varepsilon$ accounting (Prop.~\ref{thm:local-eps}).
+  \item \textbf{Scale audits.} Defense-aware LiRA on ogbn-arxiv ($n_{\mathrm{sh}}{\in}\{2,4\}$) and a products BFS subsample ($15$k of $2.4$M)~\cite{hu2020ogb}, plus GAT/inductive/adaptive checks.
 \end{enumerate}
 Section~\ref{sec:related} related work; Section~\ref{sec:setup} threat model; Section~\ref{sec:harp} HARP; Sections~\ref{sec:protocol}--\ref{sec:results} evaluation; Section~\ref{sec:discussion} discussion; Section~\ref{sec:conclusion} conclusion.
 
@@ -241,17 +234,16 @@ We additionally report an inductive edge-exclusion check on Cora (Sec.~\ref{sec:
 \end{figure}
 
 \subsection{Design principle}
-Uniform posterior noise wastes budget on low-risk nodes and cannot meet ExactFrac$\ge c{>}0$.
-Node-local risk weighting is still incomplete for GNNs: if $v$ is protected but a neighbor $u$ is released cleanly, aggregation can reintroduce membership signal into $u$'s score.
-HARP therefore builds a hop-consistent protected set inside a small policy grid (Fig.~\ref{fig:harp}):
+Uniform posterior noise wastes budget on low-risk nodes and cannot meet ExactFrac$\ge c{>}0$---the release-side analogue of loading an entire graph when GPU memory is scarce.
+Node-local risk weighting is still incomplete for GNNs: if $v$ is protected but neighbor $u$ is released clean, aggregation can reintroduce membership signal into $u$'s score.
+HARP is therefore a two-tier serving framework (Fig.~\ref{fig:harp}):
 \begin{enumerate}
-  \item \textbf{Constructor:} rank nodes with LTE (topology), audit-guided vulnerability, or random risk.
-  \item Pick high-risk seeds (or search the seed fraction to hit a target Frac).
-  \item Expand $\mathcal{P}_k=\mathrm{Ball}_k(\mathcal{R})$ on the undirected graph.
-  \item \textbf{Protector:} strong Laplace on $\mathcal{P}_k$, or selective masking (exact on clean; one-hot top-1 on $\mathcal{P}_k$).
-  \item Optionally train with risk-weighted $\phi$-alignment on the same set; enforce session budget $B$ at serving time.
+  \item \textbf{LTE constructor (algorithm):} rank nodes from topology (or audit-guided vulnerability / random), pick seeds to hit target Frac, expand $\mathcal{P}_k=\mathrm{Ball}_k(\mathcal{R})$.
+  \item \textbf{Protector (pluggable):} strong Laplace on $\mathcal{P}_k$, or selective masking (exact on clean; one-hot top-1 on $\mathcal{P}_k$).
+  \item \textbf{Operator dials:} Frac, Mass, session budget $B$; optional risk-weighted $\phi$-alignment at train time.
 \end{enumerate}
 Locked HARP uses LTE + Laplace at Frac${=}0.40$; audit seeds and masking are framework ablations.
+LTE plays the role SPRING plays in streaming GNN training: a purpose-built allocator that makes the framework practical under a hard resource/quality constraint.
 
 \paragraph{Noise mass and clean fraction.}
 $\mathrm{Mass}=\sum_v\sigma_v$ and $\mathrm{Frac}=|\mathcal{P}_k|/n$ are operator accounting metrics.
@@ -424,21 +416,25 @@ ogbn-arxiv / ogbn-products: near-chance or memory-bounded audits under matched b
 \label{sec:results}
 
 \subsection{Overview}
-We organize results around operator questions:
-\textbf{(Q1)} Can HARP keep accuracy and score quality at a matched noise budget?
-\textbf{(Q2)} Does it recover Acc versus strong uniform LBP?
-\textbf{(Q3)} How do Frac, multi-query, and session budgets behave?
-\textbf{(Q4)} Do patterns hold across architectures, inductive splits, and larger OGB graphs?
-Equal-mass LBP remains the honest Acc--membership baseline when exact scores are not required.
+\paragraph{Why accept this paper (systems headline).}
+Four numbers carry the Big Data claim:
+(i)~ExactFrac${=}0.60$---infeasible for any uniform $b{>}0$;
+(ii)~up to $+42$ Acc vs.\ strong LBP on ogbn-arxiv ($0.179\rightarrow 0.599$) and $+12.5$ on Cora;
+(iii)~$60\%$ lower Mass than strong LBP at the same per-node $\sigma$;
+(iv)~score-cache hits $0\%\rightarrow 54\%$ under fresh re-query traffic from ExactFrac alone (Table~\ref{tab:cache}).
+LiRA is an audit dial that decides \emph{whether} Frac${>}0$, not the primary objective.
+
+We then answer operator questions:
+\textbf{(Q1)} Acc and score quality at matched Mass?
+\textbf{(Q2)} Acc recovery vs.\ strong LBP?
+\textbf{(Q3)} Frac, multi-query, and session budgets?
+\textbf{(Q4)} Architectures, inductive splits, and OGB scale?
+Equal-mass LBP remains the honest Acc--membership baseline when ExactFrac${=}0$ is allowed.
 
 \subsection{How to read the trade space}
-Three columns answer different goals.
-\textbf{Acc} is task utility.
-\textbf{LiRA} is a membership audit (lower is harder to attack).
-\textbf{ECE / clean majority} is data quality for downstream consumers.
-Equal-mass LBP and MemGuard can look competitive on Acc--LiRA while still noising every response (ExactFrac$=0$).
-HARP's headline is Acc recovery plus exact/calibrated scores under ExactFrac$\ge c$ (Remark~\ref{rem:uniform-infeasible}).
-Pick the constraint first---especially whether $c{>}0$ is required---then read Tables~\ref{tab:fair}--\ref{tab:eqmass}.
+\textbf{Acc} $=$ task utility; \textbf{LiRA} $=$ membership audit; \textbf{ECE / ExactFrac} $=$ Veracity for downstream consumers.
+Equal-mass LBP and MemGuard can win Acc--LiRA while ExactFrac${=}0$.
+HARP's headline is Acc recovery plus ExactFrac$\ge c$ (Remark~\ref{rem:uniform-infeasible})---pick the constraint first, then read Tables~\ref{tab:fair}--\ref{tab:eqmass}.
 
 \subsection{HARP systems headline: accuracy and score quality at matched Mass}
 \label{sec:harp-results}
@@ -908,12 +904,12 @@ When LiRA${\approx}0.5$, the systems recommendation is Frac${=}0$.
 When policy still mandates strong $\sigma$ \emph{or} ExactFrac$\ge c{>}0$, selective release is the feasible class; uniform LBP is not (Remark~\ref{rem:uniform-infeasible}).
 
 \paragraph{How to score this paper.}
-On Big Data criteria (ExactFrac as a Veracity SLA, Mass/Frac telemetry, Acc recovery vs.\ strong LBP, scale audits), judge HARP as a systems release policy.
-On PETS/CCS criteria (new $(\varepsilon,\delta)$ mechanisms or Acc--LiRA dominance under ExactFrac$=0$), this paper declines; those problems are answered by GAP or uniform noise.
+Score HARP as Big Data \emph{infrastructure for score APIs}: a named framework (HARP) plus allocator (LTE), hard Veracity SLA (ExactFrac$\ge c$), Mass/Frac/\(B\) telemetry, and Acc/cache wins vs.\ strong LBP.
+Do not score it as PETS/CCS privacy theory: no new $(\varepsilon,\delta)$ mechanism and no Acc--LiRA dominance claim under ExactFrac$=0$ (those are GAP / uniform noise).
 
 \subsection{Impact for Big Data graph APIs}
-Hop-consistent release sets are the analogue of topology-aware row budgets; Mass/Frac give spend telemetry.
-ExactFrac enables score-cache hits that uniform noise cannot (Table~\ref{tab:cache}); heterophilic graphs recover Acc vs.\ $b{=}0.3$; audit-null large graphs argue against blanket noise.
+Hop-consistent release is the serving-side analogue of topology-aware partitioners; Mass/Frac are the release-side analogues of GPU memory and batch size.
+ExactFrac turns score caches from $0\%$ hits under fresh LBP into a majority hit rate (Table~\ref{tab:cache}); Acc recovery vs.\ $b{=}0.3$ restores usable pipelines on heterophilic and OGB graphs; audit-null regimes argue against blanket noise.
 
 \subsection{Threats to validity}
 Cora fairness/Frac: five seeds with paired CIs; other cells: three seeds.
@@ -933,10 +929,10 @@ Adaptive Frac from streaming audits, co-optimizing formal $\varepsilon$ with Mas
 
 \section{Conclusion}
 \label{sec:conclusion}
-We proposed HARP, a selective release framework for GNN prediction APIs under constrained score release: maximize accuracy subject to a membership audit and a minimum exact-response fraction.
-HARP is not a stronger membership defense than uniform noise; it is the feasible mechanism under ExactFrac$\ge c{>}0$, with hop-consistent allocation (Prop.~\ref{thm:hop-necessary}), selective local-$\varepsilon$ accounting (Prop.~\ref{thm:local-eps}), and Acc/calibration recovery versus strong LBP---including a quantified cache-hit benefit from the clean majority.
-On six benchmarks plus OGB scale-ups with defense-aware LiRA, membership audits guide \emph{when} to spend budget; Frac and $B$ are the operator dials.
-Use training-time DP when a legal global $\varepsilon$ is required.
+We proposed HARP, a selective release \emph{framework} for GNN prediction APIs under a hard Veracity constraint: ExactFrac$\ge c{>}0$.
+Like memory-efficient training systems that refuse to load the full graph, HARP refuses to noise every response: LTE allocates a hop-consistent minority, a pluggable protector spends Mass only there, and Frac/\(B\) are operator dials.
+Headline wins versus strong LBP---up to $+42$ Acc points, $60\%$ lower Mass, ExactFrac${=}0.60$, and $0\%\rightarrow 54\%$ score-cache hits---answer the systems ``why accept?'' question.
+Membership audits guide \emph{when} to spend; use training-time DP when a legal global $\varepsilon$ is required.
 
 \paragraph{Reproducibility.}
 Code (\texttt{defenses/harp.py}, \texttt{defenses/memguard.py}, \texttt{run\_harp\_eval.py}), locked configs, and frozen CSVs accompany the submission artifact at \url{https://github.com/krishharma/privacy-gnn}.
