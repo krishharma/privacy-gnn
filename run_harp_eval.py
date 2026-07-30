@@ -1,13 +1,14 @@
 """
-HARP rejection-fix experiments (clean, API-correct).
+HARP evaluation suite (paper tables and stress checks).
 
-1) Shadow completion (Chameleon n=64) + comparative figure
-2) Cache/veracity simulation + figure
-3) Hop-leakage synthetic validation
-4) Selective local-ε accounting
-5) Qualitative failure cases on Chameleon
-6) ogbn-arxiv LiRA with n_shadows=4
-7) ogbn-products subsampled defense-aware LiRA
+Runs (resume-safe, writes incrementally under results/):
+  1) Shadow-count completion (Chameleon n=64) + comparative figure
+  2) Cache/veracity simulation + figure
+  3) Hop-leakage synthetic validation
+  4) Selective local-ε accounting
+  5) Qualitative failure cases on Chameleon
+  6) ogbn-arxiv LiRA with n_shadows=4
+  7) ogbn-products subsampled defense-aware LiRA
 """
 from __future__ import annotations
 

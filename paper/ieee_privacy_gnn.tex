@@ -118,7 +118,7 @@ HARP's claim is narrower and systems-shaped: it is the feasible class of policie
 \begin{enumerate}
   \item \textbf{Constrained score release.} Formalize maximize Acc s.t.\ LiRA$\le\tau$ and ExactFrac$\ge c$; show uniform LBP is infeasible for $c{>}0$ (Remark~\ref{rem:uniform-infeasible}); prove hop-consistency is necessary under one-hop score mixing (Prop.~\ref{thm:hop-necessary}) and give selective local-$\varepsilon$ accounting (Prop.~\ref{thm:local-eps}).
   \item \textbf{Selective release framework.} Constructor$\times$protector$\times$Mass/Frac$\times$session budget $B$, with $O(|E|+n\log n)$ setup (Prop.~\ref{thm:harp-complexity}).
-  \item \textbf{Systems headline.} Versus strong LBP: $+12.5$ Acc on Cora at Frac${=}0.40$; versus equal-mass: $60\%$ clean majority and ${\sim}5{\times}$ lower ECE; quantified cache-hit simulation for ExactFrac; clean-slice fidelity across datasets.
+  \item \textbf{Systems headline.} Versus strong LBP: $+12.5$ Acc on Cora at Frac${=}0.40$; versus equal-mass: a $60\%$ clean majority and ${\sim}5{\times}$ lower ECE \emph{on Cora}; quantified cache-hit simulation for ExactFrac; portable clean-slice fidelity.
   \item \textbf{Scale audits.} ogbn-arxiv Acc recovery with defense-aware LiRA ($n_{\mathrm{sh}}{\in}\{2,4\}$); ogbn-products systems probe plus subsampled LiRA on a $15$k-node induced subgraph~\cite{hu2020ogb}.
 \end{enumerate}
 Section~\ref{sec:related} related work; Section~\ref{sec:setup} threat model; Section~\ref{sec:harp} HARP; Sections~\ref{sec:protocol}--\ref{sec:results} evaluation; Section~\ref{sec:discussion} discussion; Section~\ref{sec:conclusion} conclusion.
@@ -309,7 +309,7 @@ Noising $\mathrm{Ball}_1(\{v\})$ is necessary and sufficient to place Laplace no
 \begin{proof}[Proof sketch]
 Under seed-only protection the released leaf score equals the clean mixer output, so the member/non-member gap in $\mathbb{E}[s_u]$ remains $\alpha\gamma$.
 Expanding protection to $u$ adds Lap$(0,\sigma)$ to $s_u$, which does not change the gap in expectation but is the unique one-hop cover that subjects every $\alpha$-dependent coordinate to noise.
-A synthetic mixer confirms the ordering: unprotected and seed-only leaf AUROCs stay near $1.0$, while hop-$1$ protection collapses the leaf attack (Fig.~\ref{fig:hop-cache}, left).
+A synthetic mixer confirms the ordering: unprotected and seed-only leaf AUROCs stay near $1.0$, while hop-$1$ protection lowers the leaf attack to ${\approx}0.72$ (Fig.~\ref{fig:hop-cache}, left)---still above chance, but no longer a near-perfect membership channel.
 \end{proof}
 Frac---not $k$---is the population Acc--Mass knob; $k$ is a coverage constraint on protected-set geometry.
 We keep $k{=}1$ as the default for 2-layer SAGE/GCN; $k{\in}\{0,2\}$ appear in the consolidated ablation (Table~\ref{tab:ablate}).
@@ -320,7 +320,8 @@ We keep $k{=}1$ as the default for 2-layer SAGE/GCN; $k{\in}\{0,2\}$ appear in t
 \label{thm:harp-complexity}
 Let $G=(V,E)$ have $n=|V|$ nodes and $m=|E|$ adjacency endpoints, with $C$ classes.
 Fix hop radius $k=O(1)$ and $T=O(1)$ binary-search iterations for a target protected fraction.
-Then setup (LTE + seeds + $k$-hop expand) runs in $O(m + n\log n)$ time and $O(n+m)$ space; release runs in $O(nC)$---matching uniform LBP's tier, with less noise-sampling work whenever $\mathrm{Frac}<1$.
+Then setup (LTE + seeds + $k$-hop expand) runs in $O(m + n\log n)$ time and $O(n+m)$ space.
+Release runs in $O(nC)$---matching uniform LBP's tier, with less noise-sampling work whenever $\mathrm{Frac}<1$.
 \end{proposition}
 \begin{proof}[Proof sketch]
 LTE scans edges then normalizes $n$ scores: $O(m+n)$.
@@ -331,11 +332,12 @@ Release writes scales, samples Laplace on $\mathcal{P}_k$, and renormalizes: $O(
 \begin{proposition}[Selective local privacy accounting]
 \label{thm:local-eps}
 Interpret each node's clean posterior as a query with $\ell_1$-sensitivity at most $\Delta{=}2$ (worst-case change on the simplex).
-Independent Lap$(\sigma)$ on every coordinate of $v\in\mathcal{P}_k$ yields $\varepsilon_{\mathrm{loc}}= \Delta/\sigma$ local DP for that node's release; nodes in $V\setminus\mathcal{P}_k$ have $\varepsilon{=}\infty$.
-Consequently any policy with ExactFrac$>0$ has infinite \emph{global} $\varepsilon$---ExactFrac$>0$ and global DP are incompatible by construction.
+Independent Lap$(\sigma)$ on every coordinate of $v\in\mathcal{P}_k$ yields $\varepsilon_{\mathrm{loc}}=\Delta/\sigma$ local DP for that node's release.
+Nodes in $V\setminus\mathcal{P}_k$ have $\varepsilon{=}\infty$.
+Hence any policy with ExactFrac$>0$ has infinite \emph{global} $\varepsilon$: ExactFrac$>0$ and global DP are incompatible by construction.
 \end{proposition}
 At the locked point ($\sigma{=}0.30$, Frac${=}0.40$) this gives $\varepsilon_{\mathrm{loc}}{=}2/0.3\approx 6.67$ on the protected minority and $\varepsilon{=}\infty$ on the $60\%$ clean majority.
-This is the constrained-release tradeoff stated formally: HARP provides a finite local guarantee where it spends noise, and an explicit non-guarantee where it keeps scores exact.
+HARP therefore provides a finite local guarantee where it spends noise, and an explicit non-guarantee where it keeps scores exact.
 When a legal global $\varepsilon$ is required, use training-time DP (e.g., GAP) instead~\cite{sajadmanesh2023gap}.
 
 \paragraph{Accounting identity (stated once).}
@@ -436,8 +438,8 @@ Pick the constraint first---especially whether $c{>}0$ is required---then read T
 \label{sec:harp-results}
 \paragraph{Primary claim.}
 Fig.~\ref{fig:headline} and Table~\ref{tab:fair}: at matched Mass${\approx}325$ on Cora, equal-mass weak LBP ($b{=}0.120$) perturbs every node (ECE $0.159$).
-HARP yields ECE $0.033$ with Frac${=}0.40$---nearly $5{\times}$ better calibration---and a $60\%$ bit-exact clean majority.
-Equal-mass cannot produce exact scores.
+HARP yields ECE $0.033$ with Frac${=}0.40$---nearly $5{\times}$ better calibration \emph{on Cora}---and a $60\%$ bit-exact clean majority.
+Equal-mass cannot produce exact scores; on some other graphs weak uniform noise can look competitive on population ECE while still noising every response (Table~\ref{tab:eqmass}).
 
 \paragraph{Utility vs.\ published strong LBP.}
 Against LBP $b{=}0.3$~\cite{olatunji2021mia}, HARP raises Acc $0.707\rightarrow 0.832$ ($\Delta$Acc $+0.125$) at LiRA $0.517\rightarrow 0.533$ and Frac${=}0.40$ (Tables~\ref{tab:fair},~\ref{tab:mass}).
@@ -704,7 +706,7 @@ Actor & 0.327 / 0.562 & 0.319 / 0.565 & 0.326 / 0.562 & \\
 \includegraphics[width=0.49\linewidth]{fig_harp_hop_necessity.png}
 \hfill
 \includegraphics[width=0.49\linewidth]{fig_harp_cache_veracity.png}
-\caption{Left: hop necessity (Prop.~\ref{thm:hop-necessary})---seed-only leaves leaf AUROC at $1.0$; hop-$1$ collapses it. Right: score-cache hits under re-query traffic (Table~\ref{tab:cache}).}
+\caption{Left: hop necessity (Prop.~\ref{thm:hop-necessary})---seed-only leaves leaf AUROC at $1.0$; hop-$1$ lowers it to ${\approx}0.72$. Right: score-cache hits under re-query traffic (Table~\ref{tab:cache}).}
 \label{fig:hop-cache}
 \end{figure}
 
@@ -732,15 +734,16 @@ HARP $B{=}1$ & $0.60$ & $0.865$ & $1.000$ \\
 \paragraph{Qualitative failure case (Chameleon).}
 Population metrics hide mechanism.
 Of $375$ protected train nodes (seed $42$), only $13$ (${\approx}3.5\%$) failed to shrink their train$-$test true-class confidence gap under HARP---overall mean gap falls $0.46\rightarrow 0.11$.
-Manual inspection of those $12$ failures shows a recurring pattern: Lap$(\sigma{=}0.3)$ plus renormalization can \emph{increase} true-class confidence on some draws (e.g., node $177$: $0.78\rightarrow 1.00$; node $381$: $0.34\rightarrow 0.81$), concentrating mass on the true class by chance.
+Manual inspection of those $13$ failures shows a recurring pattern: Lap$(\sigma{=}0.3)$ plus renormalization can \emph{increase} true-class confidence on some draws (e.g., node $177$: $0.78\rightarrow 1.00$; node $381$: $0.34\rightarrow 0.81$), concentrating mass on the true class by chance.
 Peaky clean posteriors (conf$>0.9$) are also hard to flatten.
-The takeaway for operators: HARP reliably softens the mid-confidence mass that drives population LiRA, but a small overconfident/unlucky tail remains---raise Frac or $\sigma$ on that slice if canaries demand it, rather than expecting uniform-LBP-level erasure at ExactFrac${=}0.60$.
+The takeaway for operators: HARP softens the mid-confidence mass that drives population LiRA, but a small overconfident/unlucky tail remains.
+Raise Frac or $\sigma$ on that slice if canaries demand it; do not expect uniform-LBP-level erasure at ExactFrac${=}0.60$.
 
 \paragraph{Adaptive LTE-aware queries.}
 \label{sec:adaptive}
-Table~\ref{tab:adaptive}: restricting queries to unprotected nodes, protected-set boundary cleans, or top-decile LTE seeds raises conf AUROC $0.513\rightarrow 0.638$--$0.651$ under locked HARP (3 seeds), while subset LiRA stays near population (${\approx}0.53$--$0.54$).
-Population LiRA understates conf-MIA on the clean majority---log unprot./boundary canaries and raise Frac or $B$ if they drift.
-Raising Frac to $0.60$ collapses the top-decile LTE canary ($0.651\rightarrow 0.505$) while residual clean-slice conf AUROC remains elevated (${\approx}0.63$)---pair Frac escalation with session budget $B{=}1$.
+Table~\ref{tab:adaptive}: querying unprotected nodes, boundary cleans, or top-decile LTE seeds raises conf AUROC $0.513\rightarrow 0.638$--$0.651$ under locked HARP, while subset LiRA stays near population (${\approx}0.53$--$0.54$).
+Population LiRA understates conf-MIA on the clean majority---log those canaries and raise Frac or $B$ if they drift.
+Raising Frac to $0.60$ drops the top-decile LTE canary ($0.651\rightarrow 0.505$), but residual clean-slice conf AUROC stays elevated (${\approx}0.63$); pair Frac escalation with $B{=}1$.
 
 \begin{table}[!t]
 \caption{LTE-aware adaptive queries on Cora HARP (3 seeds).}
@@ -767,10 +770,10 @@ At Frac${=}0.60$, Acc falls to $0.549$ while LiRA improves to $0.559$---inductiv
 
 \subsection{When to spend: volume $\times$ structure}
 Table~\ref{tab:audit}(a): undefended LiRA concentrates in small/mid heterophilic cells; Photo/PubMed/ogbn-arxiv sit near chance under matched shadows---audit first, then set Frac.
-Table~\ref{tab:audit}(b) reports the honest shadow-count story on Cora for \emph{none / LBP / HARP}.
-Absolute LiRA rises with $n_{\mathrm{shadows}}$ for every defense (Gaussian LiRA sharpens~\cite{carlini2022membership}); Acc is invariant.
-\textbf{HARP does not beat strong LBP on LiRA at large shadow counts}---at $n_{\mathrm{sh}}{=}64$ on Cora, LBP LiRA $0.561$ vs.\ HARP $0.677$---expected when ExactFrac$=0$ is allowed.
-What HARP keeps is (i)~strictly lower LiRA than undefended and (ii)~large Acc recovery vs.\ strong LBP ($\Delta$Acc $+0.12$, invariant in $n_{\mathrm{sh}}$).
+Table~\ref{tab:audit}(b) reports the honest shadow-count story on Cora for none / LBP / HARP.
+Absolute LiRA rises with $n_{\mathrm{shadows}}$ for every defense~\cite{carlini2022membership}; Acc is invariant.
+HARP does \emph{not} beat strong LBP on LiRA at large shadow counts (Cora $n_{\mathrm{sh}}{=}64$: LBP $0.561$ vs.\ HARP $0.677$)---expected when ExactFrac$=0$ is allowed.
+What HARP keeps is (i)~strictly lower LiRA than undefended and (ii)~Acc recovery vs.\ strong LBP ($\Delta$Acc $+0.12$, invariant in $n_{\mathrm{sh}}$).
 TPR@1\% FPR follows the same pattern.
 
 \begin{table}[!t]
@@ -812,12 +815,13 @@ $\mathbf{n_{\mathrm{sh}}}$ & \textbf{none} & \textbf{LBP} & \textbf{HARP} \\
 
 \subsection{Canaries and large-graph volume}
 Table~\ref{tab:canary-ogbn}(a): HARP suppresses planted/top-decile confidence cues relative to none/LBP; population LiRA remains primary.
-Table~\ref{tab:canary-ogbn}(b): on ogbn-arxiv (${\sim}169$k; NeighborLoader; gate off, warmup $3$)~\cite{hu2020ogb}, strong LBP collapses Acc to $0.179$ $[0.175,0.184]$ while HARP recovers $0.599$ $[0.597,0.601]$ (paired $\Delta$Acc $+0.420$ $[0.414,0.425]$; 3 seeds) at Frac${=}0.40$.
-Defense-aware LiRA stays near chance at both $n_{\mathrm{sh}}{=}2$ and $n_{\mathrm{sh}}{=}4$ (Table~\ref{tab:canary-ogbn}(b))---a volume Acc-recovery result under an audit-null regime, not a claim that ogbn needs Frac${>}0$.
-On ogbn-products (${\sim}2.4$M nodes)~\cite{hu2020ogb}, Table~\ref{tab:products} reports the systems probe on a $16$\,GB host plus a defense-aware LiRA audit on a BFS-induced $15$k-node subgraph ($829$k edges; $n_{\mathrm{sh}}{=}2$).
-HARP recovers Acc $0.343\rightarrow 0.686$ vs.\ strong LBP while LiRA stays near chance---the same Acc-recovery pattern as ogbn-arxiv, now with an honest large-graph audit.
+Table~\ref{tab:canary-ogbn}(b): on ogbn-arxiv (${\sim}169$k; NeighborLoader; gate off, warmup $3$)~\cite{hu2020ogb}, strong LBP drops Acc to $0.179$ $[0.175,0.184]$.
+HARP recovers $0.599$ $[0.597,0.601]$ (paired $\Delta$Acc $+0.420$ $[0.414,0.425]$; 3 seeds) at Frac${=}0.40$.
+Defense-aware LiRA stays near chance at both $n_{\mathrm{sh}}{=}2$ and $n_{\mathrm{sh}}{=}4$---a volume Acc-recovery result under an audit-null regime, not a claim that ogbn needs Frac${>}0$.
+On ogbn-products (${\sim}2.4$M nodes)~\cite{hu2020ogb}, Table~\ref{tab:products} reports a systems probe on a $16$\,GB host plus a defense-aware LiRA audit on a BFS-induced $15$k-node subgraph ($829$k edges; $n_{\mathrm{sh}}{=}2$).
+HARP recovers Acc $0.343\rightarrow 0.686$ vs.\ strong LBP while LiRA stays near chance.
 Full-graph products LiRA exceeds host memory; the BFS subsample closes that gap without inventing a full-graph privacy claim.
-The Big Data boundary: release accounting and loader serving scale to millions of nodes; full-graph shadow audits need more RAM or distributed training.
+The Big Data boundary is clear: release accounting and loader serving scale; full-graph shadow audits need more RAM or distributed training.
 
 \begin{table}[!t]
 \caption{ogbn-products: systems probe (full graph) and BFS-induced $15$k-node LiRA audit ($829$k edges; 3 seeds; $n_{\mathrm{sh}}{=}2$).}
@@ -925,7 +929,7 @@ On six benchmarks plus OGB scale-ups with defense-aware LiRA, membership audits 
 Use training-time DP when a legal global $\varepsilon$ is required.
 
 \paragraph{Reproducibility.}
-Code (\texttt{defenses/harp.py}, \texttt{defenses/memguard.py}, \texttt{run\_harp\_rejection\_fix.py}), locked configs, and frozen CSVs accompany the submission artifact at \url{https://github.com/krishharma/privacy-gnn}.
+Code (\texttt{defenses/harp.py}, \texttt{defenses/memguard.py}, \texttt{run\_harp\_eval.py}), locked configs, and frozen CSVs accompany the submission artifact at \url{https://github.com/krishharma/privacy-gnn}.
 Runs used Darwin arm64 CPU; LiRA $n_{\mathrm{shadows}}{=}4$ primary ($16$/$64$ comparative sweeps on Cora/Chameleon).
 
 \balance

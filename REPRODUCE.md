@@ -1,4 +1,6 @@
-# Reproduce the IEEE BigData SCML + SPAB + SAMI experiments
+# Reproduce the HARP IEEE BigData 2026 experiments
+
+Artifact for: *HARP: Hop-Aware Selective Release for Privacy-Audited GNN Prediction APIs*.
 
 ## Environment
 
@@ -9,115 +11,73 @@ source venv/bin/activate   # Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-Prefer `./venv/bin/python` if the project venv is already present.
-
-## One-command confirmatory core (paper tables)
+Prefer `./venv/bin/python` if a project venv already exists.
 
 ```bash
-./venv/bin/python run_core_tables.py
-# or full YAML grid:
-PRIVACYGNN_CONFIG=experiment_config_confirmatory.yaml ./venv/bin/python run_final.py
+export PRIVACYGNN_CONFIG=experiment_config_confirmatory.yaml
 ```
 
-Writes:
-- `results/core_results.csv` / `results/all_results.csv` — per-seed rows (includes `config_hash`)
-- `results/summary.csv` — mean/std over seeds (via `run_final.py`)
-- `results/significance.csv` — paired tests vs `none` (conf AUROC) + Holm adjustment
-- `results/significance_lira.csv` — same for LiRA AUROC
-- `results/significance_confirmatory.csv` — SAMI vs baselines with effect sizes
-- `results/summary_bootstrap.csv` — 95% bootstrap CIs over seeds
-- `results/summary_delta_bootstrap.csv` — bootstrap CIs on paired **ΔAUROC**
-- `results/power_analysis.json` — power paragraph for Cora GraphSAGE
+## Paper tables (recommended order)
 
 ```bash
-./venv/bin/python run_stats_power.py
-./venv/bin/python summarize_paper_tables.py
+# 1) Primary Acc / LiRA / Mass / Frac grid (six graphs)
+./venv/bin/python run_harp_baselines.py
+
+# 2) MemGuard, selective masking, audit/random seeds, slice ECE, session B, Frac=0.6
+./venv/bin/python run_harp_competitiveness_upgrade.py
+
+# 3) Shadow scaling, cache simulation, hop necessity, local ε,
+#    Chameleon failure cases, ogbn-arxiv LiRA (n_shadows=4), products subsample LiRA
+./venv/bin/python run_harp_eval.py
+
+# 4) ogbn-arxiv Acc recovery (n_shadows=2 primary)
+./venv/bin/python run_harp_ogbn.py
 ```
 
-
-## Volume (ogbn-arxiv)
+Optional extras used in the paper:
 
 ```bash
-PRIVACYGNN_CONFIG=experiment_config_ogbn_smoke.yaml ./venv/bin/python run_ogbn_smoke.py
-./venv/bin/python run_ogbn_volume.py
+./venv/bin/python run_harp_adaptive_adversary.py
+./venv/bin/python run_harp_shadow_sweep.py          # subset of run_harp_eval shadow block
+./venv/bin/python run_ogbn_products_harp_systems.py  # full-graph systems probe (no LiRA)
 ```
 
-## SCML expanded + MIA-eval + SAMI budget
+## Frozen CSVs ↔ paper tables
+
+| Paper table / figure | Primary CSV / figure |
+|----------------------|----------------------|
+| Table fair (Cora systems) | `results/harp_fairness_cora_5seed.csv`, `harp_memguard_mask_means.csv` |
+| Table harp (6-graph grid) | `results/harp_means.csv`, `harp_baselines.csv` |
+| Table eqmass / slice ECE | `results/harp_equal_mass_multids_means.csv`, `harp_slice_ece_multids_means.csv` |
+| Table frac / session / mq | `results/harp_frac_sweep_5seed.csv`, `harp_session_b_sweep_cora.csv`, `harp_multi_query.csv` |
+| Table ablate (constructors) | `results/harp_audit_seeds_means.csv`, `harp_lte_vs_uniform_delta.csv` |
+| Table audit (shadow scaling) | `results/harp_shadow_comparative.csv`, `harp_shadow_sweep_means.csv` |
+| Table cache | `results/harp_cache_simulation.csv` |
+| Table canary / ogbn-arxiv | `results/harp_canary.csv`, `harp_ogbn.csv`, `harp_ogbn_lira4_means.csv` |
+| Table products | `results/harp_products_sub_lira_means.csv`, `ogbn_products_harp_systems.json` |
+| Fig hop / cache | `figures/fig_harp_hop_necessity.png`, `fig_harp_cache_veracity.png` |
+| Failure-case narrative | `results/harp_failure_cases_chameleon.json` |
+
+## Locked HARP
+
+`LOCKED_HARP` in `defenses/harp.py`: Frac=0.40, σ_strong=0.30, k=1, λ=0.5.
+
+LiRA primary: `n_shadows=4` (citation/heterophilic); ogbn-arxiv primary `n_shadows=2`, stress `n_shadows=4`.
+
+## Manuscript
 
 ```bash
-./venv/bin/python run_scml_expanded.py
-./venv/bin/python run_mia_eval_standard.py
-./venv/bin/python run_sami_budget_protocol.py
-./venv/bin/python run_gcn_hardcell_arch.py
+cd paper && pdflatex ieee_privacy_gnn.tex && pdflatex ieee_privacy_gnn.tex
 ```
 
-## Structure-Conditioned Membership Leakage (SCML)
-
-Primary scientific analysis (fit on synthetics; architecture gap; feature reversal; intervention validity):
+## Smoke check
 
 ```bash
-./venv/bin/python analyze_leakage_law.py
+PRIVACYGNN_CONFIG=experiment_config_smoke.yaml ./venv/bin/python -c \
+  "from defenses.harp import LOCKED_HARP; print(LOCKED_HARP)"
+./venv/bin/python -m pytest tests/test_harp.py -q
 ```
 
-Writes `results/leakage_law_*.csv/json`, `figures/fig_leakage_law_pred.png`, `fig_intervention_validity.png`.
+## Note on older scripts
 
-## Full 10-seed BigData matrix
-
-```bash
-PRIVACYGNN_CONFIG=experiment_config_bigdata.yaml ./venv/bin/python run_final.py
-```
-
-## Smoke test (wiring check)
-
-```bash
-PRIVACYGNN_CONFIG=experiment_config_smoke.yaml ./venv/bin/python run_final.py
-```
-
-## Figures
-
-```bash
-./venv/bin/python generate_bigdata_figures.py
-./venv/bin/python run_pareto_acc_lira.py
-```
-
-## SAMI training / release (paper Algorithm pointer)
-
-Matches Fig. SAMI and Eqs. (LTE + loss) in the paper:
-
-1. Compute LTE risks \(r_v\) from degree / local heterophily / supervised-neighbor fraction; min–max to \([0,1]\).
-2. For each epoch: forward GNN (+ optional HCAG); update discriminator \(D\) on detached \(\phi\) to separate train vs val; update GNN by CE + risk-weighted AdvReg/MMD + entropy.
-3. Release \(\tilde p_v \leftarrow \mathrm{renorm}(\mathrm{softmax}(z_v/T_v)+\mathrm{Lap}(0,\sigma r_v))\).
-4. Evaluate MIAs on train members vs test non-members only (same release on shadows).
-
-Locked citation config: \(\lambda{=}0.5\), \(\sigma{=}0.35\), HCAG on. Implementation: `privacy/sami.py` / YAML defense blocks.
-
-## Elevation experiments (canary LiRA / hop-off / DP Pareto)
-
-```bash
-./venv/bin/python run_canary_lira.py          # top-decile + planted canary LiRA
-./venv/bin/python run_choquette_boundary.py   # Choquette-Choo-style hop-off
-./venv/bin/python run_dp_pareto_tune.py       # Acc-tuned naive DP-SGD + LiRA
-./venv/bin/python run_aerni_lte_worstcase.py  # conf top-decile + Spearman CIs
-```
-
-Writes `results/canary_lira_*.csv/json`, `choquette_boundary_*.csv/json`, `dp_pareto_*.csv/json`.
-
-## Evaluation protocol
-
-See [`EVALUATION_PROTOCOL.md`](EVALUATION_PROTOCOL.md) for pre-declared primary metrics,
-40/20/40 splits, defense-aware shadows, adaptive attackers, confirmatory comparisons, and exploratory labels.
-
-## Frozen release snapshot
-
-```bash
-./venv/bin/python freeze_paper_release.py
-```
-
-## Paper build
-
-```bash
-cd paper
-pdflatex ieee_privacy_gnn.tex
-pdflatex ieee_privacy_gnn.tex
-pdflatex ieee_privacy_gnn.tex
-```
+Scripts named `run_scml_*`, `run_sami_*`, `analyze_leakage_law.py`, and `build_spab_release.py` are historical predecessors. They are **not** required to reproduce the HARP paper tables above.

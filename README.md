@@ -10,7 +10,7 @@ pip install -r requirements.txt
 export PRIVACYGNN_CONFIG=experiment_config_confirmatory.yaml
 python run_harp_baselines.py              # primary grid
 python run_harp_competitiveness_upgrade.py  # MemGuard, masking, audit seeds
-python run_harp_rejection_fix.py         # shadow/cache/hop/ε/failure/ogbn LiRA
+python run_harp_eval.py         # shadow/cache/hop/ε/failure/ogbn LiRA
 ```
 
 ## Key modules
@@ -21,7 +21,7 @@ python run_harp_rejection_fix.py         # shadow/cache/hop/ε/failure/ogbn LiRA
 | `defenses/memguard.py` | Simplified MemGuard release baseline |
 | `defenses/lbp.py` | Uniform Laplace posterior noise |
 | `experiment.py` | Train + defense-aware LiRA / ECE |
-| `run_harp_rejection_fix.py` | Shadow scaling, cache sim, hop necessity, local ε, failure cases, ogbn/products LiRA |
+| `run_harp_eval.py` | Shadow scaling, cache sim, hop necessity, local ε, failure cases, ogbn/products LiRA |
 | `run_harp_*.py` | Paper tables and ablations |
 | `paper/ieee_privacy_gnn.tex` | Manuscript |
 
