@@ -68,7 +68,7 @@ Across six graphs, GAT/inductive checks, ogbn-arxiv (${\sim}169$k) with defense-
 \end{abstract}
 
 \begin{IEEEkeywords}
-graph neural networks, prediction APIs, Big Data systems, selective release, calibration, membership inference
+graph neural networks, prediction APIs, Big Data systems, selective release, data quality, membership inference
 \end{IEEEkeywords}
 
 \section{Introduction}
@@ -100,8 +100,8 @@ Under our locked setting (protected fraction Frac${=}0.40$), about $60\%$ of API
 \subsection{Gap}
 Prior defenses include LBP~\cite{olatunji2021mia}, MemGuard~\cite{jia2019memguard}, train-time GNN MIA methods (GTD, MaskArmor)~\cite{gtd2024,maskarmor2024}, AdvReg~\cite{nasr2018advreg}, and training-time DP-GNNs~\cite{sajadmanesh2023gap,napgnn2023,abadi2016deepdp,dwork2006dp}.
 MemGuard and uniform LBP both perturb every response; train-time methods do not expose Mass/Frac release accounting.
-None jointly provide a hop-expanded release set, constructor$\times$protector policy grid, Mass/Frac dials, matched-budget calibration, and release complexity under standard membership audits.
-HARP targets that systems gap.
+None treat ExactFrac$\ge c{>}0$ as a hard systems constraint on a hop-coupled GNN API, nor expose constructor$\times$protector dials under matched-budget audits.
+HARP targets that systems gap---reusing known protectors inside a new allocation problem.
 
 \paragraph{Running example.}
 On Cora ($n{=}2708$), strong LBP cuts accuracy from ${\approx}0.88$ to ${\approx}0.71$.
@@ -114,9 +114,15 @@ HARP is \emph{not} a claim of lower population LiRA than equal-mass or strong un
 When ExactFrac$=0$ is allowed, uniform noise is often the better Acc--LiRA point.
 HARP's claim is narrower and systems-shaped: it is the feasible class of policies under ExactFrac$\ge c{>}0$, with hop-consistent allocation, operator dials, and Acc/calibration recovery versus the published strong-LBP recipe.
 
+\paragraph{Novelty (what is new).}
+The conceptual contribution is the \emph{problem}, not a new noise distribution.
+Prior release defenses answer ``how to perturb a score''; HARP answers ``how to allocate a release budget on a message-passing API when a clean majority is mandatory.''
+Laplace and masking are interchangeable \emph{protectors}---pluggable baselines, not the invention.
+What is new is constrained score release with ExactFrac as a first-class constraint, hop-consistent protected-set geometry, and Mass/Frac/\(B\) telemetry under matched-budget audits.
+
 \subsection{Contributions and paper map}
 \begin{enumerate}
-  \item \textbf{Constrained score release.} Formalize maximize Acc s.t.\ LiRA$\le\tau$ and ExactFrac$\ge c$; show uniform LBP is infeasible for $c{>}0$ (Remark~\ref{rem:uniform-infeasible}); prove hop-consistency is necessary under one-hop score mixing (Prop.~\ref{thm:hop-necessary}) and give selective local-$\varepsilon$ accounting (Prop.~\ref{thm:local-eps}).
+  \item \textbf{Constrained score release.} Formalize maximize Acc s.t.\ LiRA$\le\tau$ and ExactFrac$\ge c$; show uniform LBP is infeasible for $c{>}0$ (Remark~\ref{rem:uniform-infeasible}); establish hop-consistency under one-hop mixing (Prop.~\ref{thm:hop-necessary}) and selective local-$\varepsilon$ accounting (Prop.~\ref{thm:local-eps}).
   \item \textbf{Selective release framework.} Constructor$\times$protector$\times$Mass/Frac$\times$session budget $B$, with $O(|E|+n\log n)$ setup (Prop.~\ref{thm:harp-complexity}).
   \item \textbf{Systems headline.} Versus strong LBP: $+12.5$ Acc on Cora at Frac${=}0.40$; versus equal-mass: a $60\%$ clean majority and ${\sim}5{\times}$ lower ECE \emph{on Cora}; quantified cache-hit simulation for ExactFrac; portable clean-slice fidelity.
   \item \textbf{Scale audits.} ogbn-arxiv Acc recovery with defense-aware LiRA ($n_{\mathrm{sh}}{\in}\{2,4\}$); ogbn-products systems probe plus subsampled LiRA on a $15$k-node induced subgraph~\cite{hu2020ogb}.
@@ -155,16 +161,17 @@ DP-SGD and DP-GNNs~\cite{abadi2016deepdp,sajadmanesh2023gap} provide formal priv
 Homophily modulates the train/test $\phi$-gap~\cite{zhu2020beyondhomophily,pei2020geomgcn,lim2021linkx}: under low $h$ and sparsity, supervised memorization widens membership cues---motivating risk-weighted budget allocation.
 
 \subsection{Positioning}
-Our contribution is a \textbf{selective release framework} for GNN score APIs with Mass/Frac systems metrics.
-Uniform output noise (LBP, MemGuard) and train-time defenses (GTD, MaskArmor) are baselines.
+Our contribution is a \textbf{Big Data systems} selective-release framework for GNN score APIs---not a new formal privacy mechanism for PETS/CCS/NDSS-style evaluation.
+Uniform output noise (LBP, MemGuard) and train-time defenses (GTD, MaskArmor) are baselines and pluggable protectors.
 Formal DP (GAP) remains the right tool when an $\varepsilon$ guarantee is required~\cite{sajadmanesh2023gap}; we do not re-implement GAP under our splits.
-In short: LBP/MemGuard spend on every node; GTD/MaskArmor harden training without release Mass/Frac; GAP answers formal $\varepsilon$; HARP answers constrained exact-fraction release under audits.
+In short: LBP/MemGuard spend on every node; GTD/MaskArmor harden training without release Mass/Frac; GAP answers formal $\varepsilon$; HARP answers constrained exact-fraction release under audits, scored on Volume/Velocity/Veracity.
 
 \paragraph{Systems lens (why Big Data).}
 Training systems optimize memory and throughput.
-Score-API release is an adjacent surface: every prediction is a data product with a utility and quality cost.
-HARP logs Frac and Mass the way operators already log batch size.
-We compare against the published strong LBP recipe ($b{=}0.3$) and against equal-mass weak noise so reviewers see what the same budget buys when spent uniformly.
+Score-API release is an adjacent surface: every prediction is a data product with utility/quality cost (Veracity), re-query draws (Velocity), and million-node graphs (Volume).
+HARP logs Frac and Mass the way operators log batch size.
+We compare against published strong LBP ($b{=}0.3$) and equal-mass weak noise so reviewers see what the same budget buys when spent uniformly.
+Reviewers seeking $(\varepsilon,\delta)$ novelty or a universal LiRA win should redirect to GAP and equal-mass LBP---different problems.
 
 \section{Problem Setup}
 \label{sec:setup}
@@ -348,7 +355,8 @@ We do not restate this caveat elsewhere.
 
 \subsection{What HARP is not}
 HARP is not differential privacy~\cite{dwork2006dp} and is not a claim of lower population LiRA than uniform noise under ExactFrac$=0$.
-It is an empirical selective release framework for the constrained problem: spend a protector on a hop-consistent minority, keep the rest exact, and audit with membership attacks.
+It is not a new Laplace mechanism; the novelty is the constrained ExactFrac allocation problem and hop-consistent policy class.
+It is an empirical selective release framework: spend a protector on a hop-consistent minority, keep the rest exact, and audit with membership attacks.
 
 \paragraph{Intuition.}
 Think of HARP as a two-tier API.
@@ -358,11 +366,9 @@ The constructor ranks \emph{where} to spend; Frac sets \emph{how much}; the sess
 
 \section{Motivation: When Selective Privacy Pays}
 \label{sec:discovery}
-Matched-budget undefended LiRA (Table~\ref{tab:audit}) concentrates leakage in small/mid heterophilic cells; several mid/large graphs sit near chance under $n_{\mathrm{shadows}}{=}4$.
-That audit motivates selective spend: do not pay strong uniform noise where LiRA${\approx}0.5$; deploy HARP where LiRA$\gg 0.5$ \emph{or} where veracity (exact/calibrated scores) is required under a strong-$\sigma$ policy.
-
-\paragraph{Three deployment regimes.}
-Heterophilic graphs (Chameleon/Actor) show auditable LiRA and LTE helps at fixed Frac; homophilic Cora/Citeseer emphasize veracity at matched Mass; large/audit-null graphs (PubMed/Photo/ogbn) often warrant Frac${=}0$ unless policy forces strong $\sigma$ (ogbn Acc recovery $+0.420$).
+Matched-budget undefended LiRA (Table~\ref{tab:audit}) concentrates in small/mid heterophilic cells; several mid/large graphs sit near chance under $n_{\mathrm{shadows}}{=}4$.
+Audit first: do not pay strong uniform noise where LiRA${\approx}0.5$; deploy HARP where LiRA$\gg 0.5$ \emph{or} ExactFrac is required under a strong-$\sigma$ policy.
+Heterophilic graphs (Chameleon/Actor) show auditable LiRA; Cora/Citeseer emphasize veracity at matched Mass; PubMed/Photo/ogbn often warrant Frac${=}0$ unless policy forces strong $\sigma$.
 
 \section{Experimental Protocol}
 \label{sec:protocol}
@@ -880,7 +886,7 @@ HARP & 0.599 & 0.514 & 0.505 & 20\,322 \\
 \end{table}
 
 \paragraph{Systems microbenchmarks.}
-Cora LTE$+$hop setup ${\approx}41$\,ms; HARP release ${\approx}0.51$\,ms vs.\ LBP ${\approx}0.71$\,ms; products serving ${\approx}3.3{\times}10^3$ QPS at ${\approx}7.4$\,GB RSS.
+Cora setup ${\approx}41$\,ms; HARP release ${\approx}0.51$\,ms vs.\ LBP ${\approx}0.71$\,ms; products ${\approx}3.3{\times}10^3$ QPS at ${\approx}7.4$\,GB RSS.
 
 \paragraph{Operator workflow.}
 Audit with defense-aware LiRA; log Mass/Frac/ECE/unprot-conf.
@@ -900,6 +906,10 @@ It is \emph{not} a drop-in replacement for formal differential privacy: when a l
 Membership audits (LiRA) tell the operator whether Frac should be zero or positive; Acc and ECE tell them what the chosen Frac costs.
 When LiRA${\approx}0.5$, the systems recommendation is Frac${=}0$.
 When policy still mandates strong $\sigma$ \emph{or} ExactFrac$\ge c{>}0$, selective release is the feasible class; uniform LBP is not (Remark~\ref{rem:uniform-infeasible}).
+
+\paragraph{How to score this paper.}
+On Big Data criteria (ExactFrac as a Veracity SLA, Mass/Frac telemetry, Acc recovery vs.\ strong LBP, scale audits), judge HARP as a systems release policy.
+On PETS/CCS criteria (new $(\varepsilon,\delta)$ mechanisms or Acc--LiRA dominance under ExactFrac$=0$), this paper declines; those problems are answered by GAP or uniform noise.
 
 \subsection{Impact for Big Data graph APIs}
 Hop-consistent release sets are the analogue of topology-aware row budgets; Mass/Frac give spend telemetry.
