@@ -225,6 +225,10 @@ def _is_harp_family(name: str) -> bool:
         "harp_audit",
         "harp_random",
         "harp_mask",
+        "harp_degree",
+        "harp_train_nbr",
+        "harp_confidence",
+        "harp_entropy",
     )
 
 
@@ -284,27 +288,49 @@ def _shadow_vulnerability_risk(data, model_name, num_features, num_classes, devi
 
 
 def _resolve_harp_risk(defense_name, defense_params, train_data, model_name, num_features, num_classes, device, ep, lr, wd, cfg, release_seed=0):
-    """Resolve LTE / random / audit risk ranking for HARP seed selection."""
+    """Resolve pluggable risk ranking for HARP seed selection."""
+    from defenses.harp import risk_from_degree, risk_from_train_neighbors, risk_from_confidence
+
     seed_mode = str(defense_params.get("seed_mode", "") or "").lower()
-    if defense_name == "harp_audit":
-        seed_mode = "audit"
-    elif defense_name == "harp_random":
-        seed_mode = "random"
+    name_to_mode = {
+        "harp_audit": "audit",
+        "harp_random": "random",
+        "harp_degree": "degree",
+        "harp_train_nbr": "train_nbr",
+        "harp_confidence": "confidence",
+        "harp_entropy": "entropy",
+    }
+    if defense_name in name_to_mode:
+        seed_mode = name_to_mode[defense_name]
+    if not seed_mode:
+        seed_mode = "lte" if bool(defense_params.get("use_lte", True)) else "random"
+
     use_lte = bool(defense_params.get("use_lte", True))
     arch_aware = bool(defense_params.get("arch_aware", True))
     arch = _lte_arch(model_name)
+
     if seed_mode == "audit":
-        # Attach dataset name for shadow construction when available.
-        if not hasattr(train_data, "dataset_name") and isinstance(cfg, dict):
-            pass
         return _shadow_vulnerability_risk(
             train_data, model_name, num_features, num_classes, device, ep, lr, wd, cfg,
             n_rank=int(defense_params.get("n_rank_shadows", 4)),
             seed0=int(release_seed),
         )
-    if seed_mode == "random" or (not use_lte and defense_name != "harp_uniform"):
+    if seed_mode == "random":
         rng = np.random.RandomState(int(release_seed) + 17)
         return torch.tensor(rng.rand(int(train_data.num_nodes)), dtype=torch.float)
+    if seed_mode == "degree":
+        return risk_from_degree(train_data, invert=bool(defense_params.get("invert_degree", True)))
+    if seed_mode == "train_nbr":
+        return risk_from_train_neighbors(train_data)
+    if seed_mode in ("confidence", "entropy"):
+        model = _make_gnn(model_name, num_features, num_classes, use_gate=False)
+        train_gnn(model, train_data, device, epochs=ep, lr=lr, weight_decay=wd)
+        model.eval()
+        with torch.no_grad():
+            logits = model(train_data.x.to(device), train_data.edge_index.to(device))
+            p = torch.softmax(logits, dim=1).detach().cpu().numpy()
+        return risk_from_confidence(p, mode="entropy" if seed_mode == "entropy" else "maxconf")
+    # Default: topology LTE (or uniform ranks for harp_uniform).
     return compute_lte_risk(
         train_data.cpu(),
         uniform=not use_lte or defense_name == "harp_uniform",

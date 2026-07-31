@@ -1,24 +1,22 @@
 """
-HARP: Hop-Aware Risk-conditioned Privacy.
+HARP: Hop-Aware selective Release for ExactFrac-constrained score APIs.
 
-Uniform posterior defenses (e.g. LBP) spend noise on every node. Continuous
-risk-weighted noise (SAMI) softens that waste but still perturbs the full
-graph. HARP instead:
+Framework (not a new noise distribution):
+  1. Rank nodes with a pluggable constructor (topology / random / degree /
+     confidence / audit / oracle).
+  2. Select seeds and expand by k hops so aggregation cannot reintroduce
+     cues through unprotected neighbors.
+  3. Apply a pluggable protector (Laplace or masking) only on the protected
+     set; the complement stays bit-exact (ExactFrac = 1 - Frac).
+  4. Optionally run Constrained Frac Search (CFS) to maximize Acc subject to
+     ExactFrac >= c and LiRA <= tau.
 
-  1. Estimates per-node membership risk via LTE (reused from SAMI).
-  2. Selects a seed set of high-risk nodes (top risk_frac or threshold).
-  3. Expands seeds by k hops on the undirected graph so neighborhood
-     aggregation cannot reintroduce membership cues through neighbors.
-  4. Applies strong release noise (and optional train-time alignment) only
-     on the hop-consistent protected set; unprotected nodes stay clean.
-
-The primary systems claim is lower noise mass / higher Acc–QPS at matched
-LiRA relative to uniform LBP, while remaining competitive with SAMI on
-leaky cells.
+Default paper configuration is release-only (no train-time alignment).
+Topology LTE is a cheap default constructor, not the claimed novelty.
 """
 from __future__ import annotations
 
-from typing import Dict, Optional, Tuple, Union
+from typing import Callable, Dict, List, Optional, Sequence, Tuple, Union
 
 import numpy as np
 import torch
@@ -214,8 +212,119 @@ def mask_risk_to_protected(
     return torch.tensor(r * m.astype(float), dtype=torch.float)
 
 
-# Locked default used in paper tables (selected on Cora val Acc; not test LiRA).
-# Tuned for Acc ≫ LBP at matched LiRA with substantially lower noise mass.
+def risk_from_degree(data, invert: bool = True) -> torch.Tensor:
+    """Degree (or inverse-degree) constructor: prefer low-degree / high-degree nodes."""
+    n = int(data.num_nodes)
+    ei = data.edge_index
+    if torch.is_tensor(ei):
+        src = ei[0].detach().cpu().numpy().astype(np.int64)
+        dst = ei[1].detach().cpu().numpy().astype(np.int64)
+    else:
+        src = np.asarray(ei[0], dtype=np.int64)
+        dst = np.asarray(ei[1], dtype=np.int64)
+    deg = np.zeros(n, dtype=float)
+    for u, v in zip(src, dst):
+        if 0 <= u < n and 0 <= v < n:
+            deg[u] += 1.0
+            deg[v] += 1.0
+    # Undirected edges are double-counted; keep relative ranks.
+    r = 1.0 / (deg + 1.0) if invert else deg
+    if r.max() > r.min():
+        r = (r - r.min()) / (r.max() - r.min() + 1e-12)
+    return torch.tensor(r, dtype=torch.float)
+
+
+def risk_from_train_neighbors(data) -> torch.Tensor:
+    """Fraction of neighbors in the supervised train set (train-exposure)."""
+    n = int(data.num_nodes)
+    ei = data.edge_index
+    if torch.is_tensor(ei):
+        src = ei[0].detach().cpu().numpy().astype(np.int64)
+        dst = ei[1].detach().cpu().numpy().astype(np.int64)
+    else:
+        src = np.asarray(ei[0], dtype=np.int64)
+        dst = np.asarray(ei[1], dtype=np.int64)
+    tr = data.train_mask.detach().cpu().numpy().astype(bool)
+    adj = [[] for _ in range(n)]
+    for u, v in zip(src, dst):
+        if 0 <= u < n and 0 <= v < n:
+            adj[u].append(int(v))
+            adj[v].append(int(u))
+    r = np.zeros(n, dtype=float)
+    for u in range(n):
+        nbrs = adj[u]
+        if not nbrs:
+            r[u] = float(tr[u])
+            continue
+        r[u] = float(np.mean([tr[v] for v in nbrs]))
+    if r.max() > r.min():
+        r = (r - r.min()) / (r.max() - r.min() + 1e-12)
+    return torch.tensor(r, dtype=torch.float)
+
+
+def risk_from_confidence(probs: np.ndarray, mode: str = "maxconf") -> torch.Tensor:
+    """
+    Score-based constructor from clean posteriors.
+    mode='maxconf': protect high-confidence nodes (classic membership cue).
+    mode='entropy': protect high-entropy (uncertain) nodes.
+    """
+    p = np.asarray(probs, dtype=float)
+    p = np.clip(p, 1e-12, 1.0)
+    if mode == "entropy":
+        r = -np.sum(p * np.log(p), axis=1)
+    else:
+        r = p.max(axis=1)
+    if r.max() > r.min():
+        r = (r - r.min()) / (r.max() - r.min() + 1e-12)
+    return torch.tensor(r, dtype=torch.float)
+
+
+def constrained_frac_search(
+    evaluate_frac: Callable[[float], Dict[str, float]],
+    exact_frac_min: float,
+    lira_max: float,
+    frac_grid: Optional[Sequence[float]] = None,
+) -> Dict[str, float]:
+    """
+    Constrained Frac Search (CFS).
+
+    ExactFrac = 1 - Frac, so ExactFrac >= c implies Frac <= 1 - c.
+    Among Frac in the feasible grid, return the point with maximum Acc
+    among those with LiRA <= lira_max. If none meet the audit, return the
+    feasible point with lowest LiRA (and mark feasible_audit=0).
+
+    evaluate_frac(frac) must return dict with keys Acc, LiRA, ExactFrac, Mass.
+    """
+    c = float(exact_frac_min)
+    tau = float(lira_max)
+    if frac_grid is None:
+        # Frac from 0 to 1-c inclusive.
+        max_frac = max(0.0, 1.0 - c)
+        frac_grid = [round(x, 3) for x in np.linspace(0.0, max_frac, 9)]
+    rows: List[Dict[str, float]] = []
+    for f in frac_grid:
+        if float(f) > 1.0 - c + 1e-9:
+            continue
+        out = dict(evaluate_frac(float(f)))
+        out["Frac"] = float(f)
+        out["ExactFrac_design"] = 1.0 - float(f)
+        rows.append(out)
+    if not rows:
+        return {"feasible": 0.0, "Frac": float("nan"), "Acc": float("nan"), "LiRA": float("nan")}
+    audit_ok = [r for r in rows if float(r.get("LiRA", 1.0)) <= tau + 1e-12]
+    if audit_ok:
+        best = max(audit_ok, key=lambda r: float(r.get("Acc", -1.0)))
+        best["feasible_audit"] = 1.0
+    else:
+        best = min(rows, key=lambda r: float(r.get("LiRA", 1.0)))
+        best["feasible_audit"] = 0.0
+    best["feasible_exact"] = 1.0
+    best["c"] = c
+    best["tau"] = tau
+    return best
+
+
+# Legacy locked config (train-time alignment). Prefer LOCKED_HARP_RELEASE for paper.
 LOCKED_HARP = {
     "lam": 0.5,
     "use_lte": True,
@@ -225,9 +334,27 @@ LOCKED_HARP = {
     "k_hops": 1,
     "strong_noise_scale": 0.30,
     "weak_noise_scale": 0.0,
-    "target_protect_frac": 0.40,  # ~40% protected after 1-hop; rest clean
+    "target_protect_frac": 0.40,
     "budget_B": 0.0,
     "warmup_epochs": 5,
     "entropy_coef": 0.05,
     "train_on_protected": True,
+}
+
+# Paper-default: release-only selective Laplace under ExactFrac SLA (c=0.60 → Frac=0.40).
+LOCKED_HARP_RELEASE = {
+    "lam": 0.0,
+    "use_lte": True,
+    "use_gate": False,
+    "arch_aware": True,
+    "risk_frac": 0.30,
+    "k_hops": 1,
+    "strong_noise_scale": 0.30,
+    "weak_noise_scale": 0.0,
+    "target_protect_frac": 0.40,
+    "budget_B": 0.0,
+    "warmup_epochs": 0,
+    "entropy_coef": 0.0,
+    "train_on_protected": False,
+    "seed_mode": "lte",
 }
