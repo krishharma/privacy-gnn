@@ -1,0 +1,10 @@
+{
+  "purpose": "Fold arxiv n_shadows=16 credibility into ExactFrac paper scale section",
+  "n_shadows": 16,
+  "defense": "none",
+  "LiRA_mean": 0.5096,
+  "Acc_mean": 0.666,
+  "compare_n2": 0.502,
+  "compare_n4": 0.503,
+  "conclusion": "LiRA stays near chance (\u22480.51) at n_sh=16; volume Acc-recovery under strong LBP remains an audit-null serving result."
+}

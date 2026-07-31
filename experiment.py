@@ -445,6 +445,23 @@ def _train_and_predict_gnn(
             delta=float(dp_cfg.get("delta", 1e-5)),
             dropedge_rate=float(tk.get("dropedge_rate", 0.0) or 0.0),
         )
+    elif defense_name == "gap_agg":
+        from defenses.gap_agg import train_gap_sage
+        model, gap_stats = train_gap_sage(
+            train_data,
+            num_features,
+            num_classes,
+            device,
+            epochs=int(defense_params.get("epochs", ep)),
+            lr=float(defense_params.get("lr", lr)),
+            weight_decay=float(defense_params.get("weight_decay", wd)),
+            sigma=float(defense_params.get("sigma", 0.5)),
+            hidden=int(defense_params.get("hidden", 64)),
+            delta=float(defense_params.get("delta", 1e-5)),
+        )
+        dp_epsilon = float(gap_stats.get("dp_epsilon", float("nan")))
+        release_stats.update(gap_stats)
+        risk = None
     elif defense_name == "gtd":
         if use_minibatch:
             train_gnn_gtd_minibatch(
@@ -843,6 +860,7 @@ def _train_and_predict_gnn(
             p, trm, tem, yn,
             max_l1=float(defense_params.get("max_l1", 0.2)),
             seed=int(release_seed),
+            n_steps=int(defense_params.get("n_steps", 80)),
         )
         pr = p.argmax(1)
         release_stats.update(mg_stats)
@@ -1172,7 +1190,7 @@ def run_one(
         "ece_test": _r(ece),
         "train_seconds": _r(train_seconds),
         "multi_query_k": int(multi_query_k),
-        "dp_epsilon": _r(dp_epsilon) if defense_name == "dp_sgd" else float("nan"),
+        "dp_epsilon": _r(dp_epsilon) if defense_name in ("dp_sgd", "gap_agg") else float("nan"),
         "noise_mass": _r(release_stats.get("noise_mass")),
         "frac_protected": _r(release_stats.get("frac_protected")),
         "frac_seeds": _r(release_stats.get("frac_seeds")),
