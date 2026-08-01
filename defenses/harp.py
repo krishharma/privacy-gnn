@@ -279,6 +279,71 @@ def risk_from_confidence(probs: np.ndarray, mode: str = "maxconf") -> torch.Tens
     return torch.tensor(r, dtype=torch.float)
 
 
+def risk_ensemble(*risks: torch.Tensor, weights: Optional[Sequence[float]] = None) -> torch.Tensor:
+    """Weighted average of normalized risk constructors (audit+entropy etc.)."""
+    rs = [torch.as_tensor(r, dtype=torch.float).reshape(-1) for r in risks]
+    if not rs:
+        raise ValueError("risk_ensemble requires at least one risk vector")
+    if weights is None:
+        weights = [1.0] * len(rs)
+    w = np.asarray(weights, dtype=float)
+    w = w / (w.sum() + 1e-12)
+    acc = torch.zeros_like(rs[0])
+    for wi, r in zip(w, rs):
+        rr = r.clone()
+        if float(rr.max() - rr.min()) > 1e-12:
+            rr = (rr - rr.min()) / (rr.max() - rr.min() + 1e-12)
+        acc = acc + float(wi) * rr
+    return acc
+
+
+def slice_constrained_frac_search(
+    evaluate_frac: Callable[[float], Dict[str, float]],
+    exact_frac_min: float,
+    slice_auc_max: float,
+    lira_max: Optional[float] = None,
+    frac_grid: Optional[Sequence[float]] = None,
+) -> Dict[str, float]:
+    """
+    Slice-aware CFS: maximize Acc s.t. ExactFrac>=c and clean-slice conf AUROC<=τ_s
+    (optional LiRA<=τ). Raises Frac (lowers ExactFrac toward c) until the clean
+    majority is no longer an easy membership pocket.
+    """
+    c = float(exact_frac_min)
+    tau_s = float(slice_auc_max)
+    if frac_grid is None:
+        max_frac = max(0.0, 1.0 - c)
+        frac_grid = [round(x, 3) for x in np.linspace(0.0, max_frac, 9)]
+    rows: List[Dict[str, float]] = []
+    for f in frac_grid:
+        if float(f) > 1.0 - c + 1e-9:
+            continue
+        out = dict(evaluate_frac(float(f)))
+        out["Frac"] = float(f)
+        out["ExactFrac_design"] = 1.0 - float(f)
+        rows.append(out)
+    if not rows:
+        return {"feasible": 0.0, "Frac": float("nan")}
+    ok = []
+    for r in rows:
+        if float(r.get("slice_auc", 1.0)) > tau_s + 1e-12:
+            continue
+        if lira_max is not None and float(r.get("LiRA", 1.0)) > float(lira_max) + 1e-12:
+            continue
+        ok.append(r)
+    if ok:
+        best = max(ok, key=lambda r: float(r.get("Acc", -1.0)))
+        best["feasible_slice"] = 1.0
+    else:
+        # Prefer lowest slice AUC among ExactFrac-feasible points.
+        best = min(rows, key=lambda r: float(r.get("slice_auc", 1.0)))
+        best["feasible_slice"] = 0.0
+    best["feasible_exact"] = 1.0
+    best["c"] = c
+    best["tau_slice"] = tau_s
+    return best
+
+
 def constrained_frac_search(
     evaluate_frac: Callable[[float], Dict[str, float]],
     exact_frac_min: float,

@@ -107,34 +107,37 @@ def memguard_perturb(
     p0 = np.asarray(probs, dtype=float).copy()
     n, c = p0.shape
     out = p0.copy()
+    # Speed: early-stop per node once member score is below 0.5 or no improve.
     for i in range(n):
         base = p0[i].copy()
         top = int(base.argmax())
         best = base.copy()
         best_score = _member_score(attack_clf, best)
+        if best_score <= 0.5:
+            continue
         cur = best.copy()
+        stall = 0
         for _ in range(int(n_steps)):
             direction = rng.normal(0.0, 1.0, size=c)
             direction /= (np.linalg.norm(direction) + 1e-12)
-            # Try both signs; keep the one that lowers member score
             step = max_l1 / max(4.0, float(c))
             improved = False
             for sign in (-1.0, 1.0):
                 cand = _project(cur + sign * step * direction, top, base, max_l1)
                 score = _member_score(attack_clf, cand)
-                if score < best_score:
+                if score < best_score - 1e-4:
                     best_score = score
                     best = cand
                     cur = cand
                     improved = True
+                    stall = 0
                     break
-            if not improved and rng.rand() < 0.2:
-                cand = _project(base + rng.laplace(0.0, max_l1 / c, size=c), top, base, max_l1)
-                score = _member_score(attack_clf, cand)
-                if score < best_score:
-                    best_score = score
-                    best = cand
-                    cur = cand
+            if not improved:
+                stall += 1
+                if stall >= 5:
+                    break
+            if best_score <= 0.45:
+                break
         out[i] = best
     return out
 
@@ -146,19 +149,37 @@ def apply_memguard(
     labels: np.ndarray,
     max_l1: float = 0.2,
     seed: int = 0,
-    n_steps: int = 40,
+    n_steps: int = 80,
 ) -> Tuple[np.ndarray, dict]:
+    """
+    Closer to Jia et al.: fit the attack on a hold-out split of members vs
+    nonmembers (shadow-style), then adversarially perturb all released scores
+    on the target split while preserving argmax.
+    """
     trm = np.asarray(train_mask, dtype=bool)
     tem = np.asarray(test_mask, dtype=bool)
     yn = np.asarray(labels, dtype=int)
     p = np.asarray(probs, dtype=float)
-    clf = fit_attack_classifier(p[trm], p[tem], yn[trm], yn[tem], use_mlp=True)
+    rng = np.random.RandomState(int(seed))
+    # Shadow-style holdout: 50% of train / test to fit the attack model.
+    tr_idx = np.where(trm)[0]
+    te_idx = np.where(tem)[0]
+    rng.shuffle(tr_idx)
+    rng.shuffle(te_idx)
+    tr_fit, tr_tgt = tr_idx[: len(tr_idx) // 2], tr_idx[len(tr_idx) // 2 :]
+    te_fit, te_tgt = te_idx[: len(te_idx) // 2], te_idx[len(te_idx) // 2 :]
+    if len(tr_fit) < 10 or len(te_fit) < 10:
+        tr_fit, te_fit = tr_idx, te_idx
+    clf = fit_attack_classifier(p[tr_fit], p[te_fit], yn[tr_fit], yn[te_fit], use_mlp=True)
     out = memguard_perturb(p, clf, max_l1=max_l1, n_steps=n_steps, seed=seed)
     return out, {
         "noise_mass": float(np.abs(out - p).sum()),
         "frac_protected": 1.0,
+        "exact_frac": 0.0,
         "mean_scale": float(np.abs(out - p).mean()),
-        "protector": "memguard_iter",
+        "protector": "memguard_shadow_mlp",
         "max_l1": float(max_l1),
         "n_steps": int(n_steps),
+        "n_fit_members": int(len(tr_fit)),
+        "n_fit_nonmembers": int(len(te_fit)),
     }

@@ -229,6 +229,8 @@ def _is_harp_family(name: str) -> bool:
         "harp_train_nbr",
         "harp_confidence",
         "harp_entropy",
+        "harp_ensemble",
+        "harp_slice",
     )
 
 
@@ -299,6 +301,8 @@ def _resolve_harp_risk(defense_name, defense_params, train_data, model_name, num
         "harp_train_nbr": "train_nbr",
         "harp_confidence": "confidence",
         "harp_entropy": "entropy",
+        "harp_ensemble": "ensemble",
+        "harp_slice": "ensemble",
     }
     if defense_name in name_to_mode:
         seed_mode = name_to_mode[defense_name]
@@ -315,6 +319,21 @@ def _resolve_harp_risk(defense_name, defense_params, train_data, model_name, num
             n_rank=int(defense_params.get("n_rank_shadows", 4)),
             seed0=int(release_seed),
         )
+    if seed_mode == "ensemble":
+        from defenses.harp import risk_ensemble, risk_from_confidence
+        audit = _shadow_vulnerability_risk(
+            train_data, model_name, num_features, num_classes, device, ep, lr, wd, cfg,
+            n_rank=int(defense_params.get("n_rank_shadows", 4)),
+            seed0=int(release_seed),
+        )
+        model = _make_gnn(model_name, num_features, num_classes, use_gate=False)
+        train_gnn(model, train_data, device, epochs=max(10, ep // 2), lr=lr, weight_decay=wd)
+        model.eval()
+        with torch.no_grad():
+            logits = model(train_data.x.to(device), train_data.edge_index.to(device))
+            p = torch.softmax(logits, dim=1).detach().cpu().numpy()
+        ent = risk_from_confidence(p, mode="entropy")
+        return risk_ensemble(audit, ent, weights=(0.6, 0.4))
     if seed_mode == "random":
         rng = np.random.RandomState(int(release_seed) + 17)
         return torch.tensor(rng.rand(int(train_data.num_nodes)), dtype=torch.float)
@@ -458,6 +477,7 @@ def _train_and_predict_gnn(
             sigma=float(defense_params.get("sigma", 0.5)),
             hidden=int(defense_params.get("hidden", 64)),
             delta=float(defense_params.get("delta", 1e-5)),
+            max_degree=int(defense_params.get("max_degree", 100)),
         )
         dp_epsilon = float(gap_stats.get("dp_epsilon", float("nan")))
         release_stats.update(gap_stats)
@@ -1150,6 +1170,28 @@ def run_one(
     except Exception:
         gap_auc, gap_acc = float("nan"), float("nan")
 
+    # ExactFrac from release stats (GAP/DP deterministic eval → 1.0; LBP/MemGuard → 0).
+    exact_frac = release_stats.get("exact_frac")
+    if exact_frac is None:
+        fp = release_stats.get("frac_protected")
+        if fp is not None and fp == fp:
+            exact_frac = 1.0 - float(fp)
+        elif defense_name in ("lbp", "memguard"):
+            exact_frac = 0.0
+        elif defense_name in ("none", "gap_agg", "dp_sgd", "gtd", "maskarmor"):
+            exact_frac = 1.0 if defense_name in ("none", "gap_agg", "dp_sgd", "gtd") else 0.0
+        else:
+            exact_frac = float("nan")
+
+    edge_auc = float("nan")
+    try:
+        from defenses.edge_mia import edge_membership_auc
+        edge_auc, _ = edge_membership_auc(
+            p, data.edge_index.cpu().numpy(), int(data.num_nodes), seed=int(seed),
+        )
+    except Exception:
+        edge_auc = float("nan")
+
     def _r(x):
         if x is None or (isinstance(x, float) and math.isnan(x)):
             return float("nan")
@@ -1193,6 +1235,9 @@ def run_one(
         "dp_epsilon": _r(dp_epsilon) if defense_name in ("dp_sgd", "gap_agg") else float("nan"),
         "noise_mass": _r(release_stats.get("noise_mass")),
         "frac_protected": _r(release_stats.get("frac_protected")),
+        "exact_frac": _r(exact_frac),
+        "edge_mia_auc": _r(edge_auc),
+        "label_only_gap_auc": _r(gap_auc),
         "frac_seeds": _r(release_stats.get("frac_seeds")),
         "mean_scale": _r(release_stats.get("mean_scale")),
         "relative_noise_mass_vs_uniform": _r(release_stats.get("relative_noise_mass_vs_uniform")),

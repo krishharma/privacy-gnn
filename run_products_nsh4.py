@@ -19,7 +19,7 @@ OUT = "results"
 SEEDS5 = [42, 123, 456, 789, 1024]
 
 
-def main(n_sub=15000, n_shadows=4):
+def main(n_sub=15000, n_shadows=4, seeds=None):
     os.makedirs(OUT, exist_ok=True)
     path = f"{OUT}/harp_products_sub{n_sub}_nsh{n_shadows}.csv"
     sub_path = f"{OUT}/products_sub_{n_sub}.pt"
@@ -38,8 +38,9 @@ def main(n_sub=15000, n_shadows=4):
         ("lbp", "lbp", {"scale": 0.3}),
         ("harp", "harp_release_only", harp),
     ]
+    seed_list = list(seeds) if seeds is not None else list(SEEDS5)
     for tag, dn, dp in jobs:
-        for seed in SEEDS5:
+        for seed in seed_list:
             if (tag, seed) in done:
                 print("skip", tag, seed, flush=True)
                 continue
