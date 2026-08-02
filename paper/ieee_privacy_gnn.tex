@@ -197,8 +197,8 @@ We additionally report an inductive edge-exclusion check on Cora (Sec.~\ref{sec:
 
 \begin{figure}[!t]
 \centering
-\includegraphics[width=0.98\linewidth]{fig_harp_schematic.png}
-\caption{HARP pipeline: risk ranking $\rightarrow$ high-risk seeds $\rightarrow$ $k$-hop expansion $\rightarrow$ protector only on the protected set.}
+\includegraphics[width=0.98\linewidth]{fig_harp_schematic}
+\caption{HARP pipeline: risk ranking $\rightarrow$ high-risk seeds $\rightarrow$ $k$-hop expansion $\rightarrow$ protector only on the protected set (ExactFrac${=}1-\mathrm{Frac}$ on the clean majority).}
 \label{fig:harp}
 \end{figure}
 
@@ -404,9 +404,9 @@ Questions: \textbf{(Q1)} feasibility under $c{>}0$; \textbf{(Q2)} Acc/ECE vs.\ s
 
 \begin{figure}[!t]
 \centering
-\includegraphics[width=0.98\linewidth]{fig_harp_exactfrac_pareto.png}
+\includegraphics[width=0.98\linewidth]{fig_harp_exactfrac_pareto}
 \caption{ExactFrac-constrained Acc--LiRA Pareto on Cora (5 seeds).
-Curves: selective HARP constructors at $c\in\{0.2,0.4,0.6,0.8\}$ (ExactFrac${=}c$).
+Selective HARP constructors sweep $c\in\{0.2,0.4,0.6,0.8\}$ (ExactFrac${=}c$).
 Uniform LBP markers are ExactFrac${=}0$ and infeasible for every $c{>}0$.}
 \label{fig:exactfrac-pareto}
 \end{figure}
@@ -449,14 +449,14 @@ Under the SLA, LiRA guides whether Frac must rise and whether the audit threshol
 
 \begin{figure}[!t]
 \centering
-\includegraphics[width=\linewidth]{fig_harp_headline.png}
-\caption{Systems headline. (A)~ECE at $n_{\mathrm{sh}}{=}16$ with ExactFrac feasibility marks. (B)~Frac Acc--Mass dial. (C)~ogbn-arxiv Acc vs.\ strong LBP.}
+\includegraphics[width=\linewidth]{fig_harp_headline}
+\caption{Systems headline for ExactFrac-constrained serving. (A)~ECE at $n_{\mathrm{sh}}{=}16$ with ExactFrac feasibility marks ($\checkmark$/$\,\times$). (B)~Frac Acc--Mass dial (locked Frac${=}0.40$). (C)~ogbn-arxiv Acc vs.\ strong LBP (volume Acc, not a full-graph privacy claim).}
 \label{fig:headline}
 \end{figure}
 
 \begin{figure}[!t]
 \centering
-\includegraphics[width=0.72\linewidth]{fig_harp_nsh16_scatter.png}
+\includegraphics[width=0.92\linewidth]{fig_harp_nsh16_scatter}
 \caption{Cora Acc--LiRA at the headline budget ($n_{\mathrm{sh}}{=}16$, 5 seeds). ExactFrac-feasible: none, GAP-agg, HARP. Equal-mass LBP/MemGuard win unconstrained Acc--LiRA but ExactFrac${=}0$.}
 \label{fig:nsh16}
 \end{figure}
@@ -848,7 +848,7 @@ Use training-time DP (alone or under HARP) when a legal global $\varepsilon$ is 
 Code (\texttt{defenses/harp.py}, \texttt{run\_nsh16\_headline.py}, \texttt{run\_cfs\_nsh16.py}, \texttt{run\_exactfrac\_sla\_evidence.py}, \texttt{run\_products\_canary\_leakage.py}, \texttt{run\_bulletproof.py}), locked configs, and frozen CSVs: \url{https://github.com/krishharma/privacy-gnn}.
 Headline LiRA $n_{\mathrm{shadows}}{=}16$; CFS uses $\tau{=}0.70$ on validation; RawExactFrac SLA evidence in Table~\ref{tab:sla}.
 
-\balance
+\IEEEtriggeratref{20}
 \begin{thebibliography}{00}
 \bibitem{shokri2017membership} R. Shokri, M. Stronati, C. Song, and V. Shmatikov, ``Membership inference attacks against machine learning models,'' in \emph{Proc. IEEE Symp. Security Privacy (S\&P)}, 2017, pp. 3--18.
 \bibitem{salem2019mlleaks} A. Salem, Y. Zhang, M. Humbert, P. Berrang, M. Fritz, and M. Backes, ``ML-Leaks: Model and data independent membership inference attacks and defenses on machine learning models,'' in \emph{Proc. NDSS}, 2019.
