@@ -53,6 +53,7 @@ Refresh paper figures from frozen CSVs:
 | Table harp (6-graph, n_sh=4) | `results/harp_means.csv`, `harp_baselines.csv` |
 | Table frac / session | `results/harp_frac_sweep_5seed.csv`, `harp_session_b_sweep_cora.csv` |
 | Table cache / serving | `results/harp_replay_flicker.csv`, `harp_serving_v2.csv`, `harp_serving_bench.csv` |
+| Table ExactFrac SLA (`tab:sla`) | `results/harp_exactfrac_sla_evidence.csv` |
 | Table products / canary | `results/harp_products_canary_leakage.csv`, `harp_products_sub*_means.csv` |
 | Table ogbn-arxiv | `results/harp_ogbn.csv`, `harp_ogbn_lira4_means.csv` |
 | HARP∘GAP | `results/harp_gap_composition.csv` |

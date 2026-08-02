@@ -460,18 +460,18 @@ Under the SLA, LiRA guides whether Frac must rise and whether the audit threshol
 \end{figure}
 
 \begin{table}[!t]
-\caption{Cora GraphSAGE under ExactFrac SLA $c{=}0.60$ (5 seeds; defense-aware LiRA at $n_{\mathrm{sh}}{=}16$).
-Feasible under $c{>}0$: none, GAP-agg (train-only noise $\Rightarrow$ ExactFrac${=}1$), HARP.
-$^\dagger$GAP-inspired aggregation Laplace with analytical $\varepsilon$ (not a full GAP codebase).
-$^\S$Shadow-fit MemGuard; $\phi$ is the standardized-MLP attack it optimizes against.
-$^\P$HARP at Frac${=}1$ recovers strong-LBP Acc--LiRA (unconstrained parity).}
+\caption{Cora GraphSAGE under ExactFrac$\ge c{=}0.60$ (5 seeds; LiRA $n_{\mathrm{sh}}{=}16$).
+Feasible under $c{>}0$: none, GAP-agg, HARP.
+$^\dagger$GAP-inspired agg.\ Laplace (analytical $\varepsilon$; not full GAP code).
+$^\S$Shadow-fit MemGuard; $\phi$ $=$ attack it optimizes.
+$^\P$HARP Frac${=}1$ recovers strong-LBP Acc--LiRA.}
 \label{tab:fair}
 \centering
-\scriptsize
-\setlength{\tabcolsep}{3pt}
+\resizebox{\columnwidth}{!}{%
+\setlength{\tabcolsep}{2.5pt}
 \begin{tabular}{@{}lccccccc@{}}
 \toprule
-\textbf{Defense} & \textbf{Feas.} & \textbf{Acc} & \textbf{LiRA} & \textbf{TPR@1\%} & $\boldsymbol{\phi}$ & \textbf{ECE}$\downarrow$ & \textbf{ExactFrac} \\
+\textbf{Defense} & \textbf{Feas.} & \textbf{Acc} & \textbf{LiRA} & \textbf{TPR@1\%} & $\boldsymbol{\phi}$ & \textbf{ECE}$\downarrow$ & \textbf{EF} \\
 \midrule
 none & yes & 0.877 & 0.813 & 0.200 & 0.650 & 0.051 & 1.00 \\
 GAP-agg ($\sigma{=}3$, $\varepsilon{\approx}41$)$^\dagger$ & yes & 0.776 & 0.624 & 0.039 & 0.540 & 0.399 & 1.00 \\
@@ -480,7 +480,8 @@ LBP equal-mass & no & 0.870 & 0.592 & 0.009 & 0.584 & 0.159 & 0.00 \\
 MemGuard$^\S$ & no & 0.877 & 0.667 & 0.080 & 0.619 & 0.063 & 0.00 \\
 LBP $b{=}0.3$ / HARP-full$^\P$ & no & 0.707 / 0.715 & 0.551 / 0.560 & 0.007 / 0.008 & 0.565 / 0.572 & 0.142 / 0.152 & 0.00 \\
 \bottomrule
-\end{tabular}
+\end{tabular}%
+}
 \end{table}
 {\scriptsize HARP Mass $325$; LBP eq-mass $325$; strong LBP $812$. MemGuard is a credible unconstrained baseline (LiRA $0.813\rightarrow 0.667$) but ExactFrac-infeasible; HARP is within ${\approx}0.01$ LiRA of MemGuard \emph{with} ExactFrac${=}0.60$ and much lower ECE. At $n_{\mathrm{sh}}{=}4$: GTD $0.878$/$0.538$; MaskArmor $0.877$/$0.580$.}
 
@@ -621,15 +622,15 @@ At the headline budget ($n_{\mathrm{sh}}{=}16$, Frac${=}0.40$), ensemble also lo
 Hop $k{\in}\{0,1,2\}$ at matched Frac changes Acc by ${\lesssim}0.01$ (release-only); selectivity, not train-time alignment, carries ExactFrac.
 
 \begin{table}[!t]
-\caption{Release-only selective constructors at Frac${=}0.40$ / ExactFrac${=}0.60$ (Cora, 5 seeds; mean$\pm$1.96\,SE).
-Slice $=$ clean-slice conf AUROC (attack-budget free). Population LiRA here is $n_{\mathrm{sh}}{=}4$; headline LiRA is Table~\ref{tab:fair} at $n_{\mathrm{sh}}{=}16$.}
+\caption{Release-only constructors at Frac${=}0.40$ (Cora, 5 seeds; mean$\pm$1.96\,SE).
+Slice $=$ clean-slice conf AUROC. LiRA here $n_{\mathrm{sh}}{=}4$; headline is Table~\ref{tab:fair}.}
 \label{tab:constructors}
 \centering
-\scriptsize
-\setlength{\tabcolsep}{3pt}
+\resizebox{\columnwidth}{!}{%
+\setlength{\tabcolsep}{2.5pt}
 \begin{tabular}{@{}lccccc@{}}
 \toprule
-\textbf{Policy} & \textbf{Feas.\ $c{=}0.6$} & \textbf{Acc} & \textbf{LiRA} & \textbf{Slice}$\downarrow$ & \textbf{ExactFrac} \\
+\textbf{Policy} & \textbf{Feas.} & \textbf{Acc} & \textbf{LiRA} & \textbf{Slice}$\downarrow$ & \textbf{EF} \\
 \midrule
 none & yes & $0.877{\pm}0.005$ & $0.567{\pm}0.006$ & --- & 1.00 \\
 GAP-agg ($\sigma{=}3$) & yes & $0.776{\pm}0.024$ & $0.518{\pm}0.008$ & --- & 1.00 \\
@@ -641,7 +642,8 @@ sel.\ random & yes & $0.810{\pm}0.006$ & $0.526{\pm}0.007$ & $0.669{\pm}0.015$ &
 sel.\ entropy & yes & $0.805{\pm}0.010$ & $0.530{\pm}0.014$ & --- & 0.60 \\
 sel.\ topology (LTE) & yes & $0.826{\pm}0.006$ & $0.536{\pm}0.008$ & $0.647{\pm}0.012$ & 0.60 \\
 \bottomrule
-\end{tabular}
+\end{tabular}%
+}
 \end{table}
 
 \paragraph{Why ExactFrac matters (serving evidence).}
@@ -652,20 +654,21 @@ Table~\ref{tab:cache} confirms bitwise re-query rates; Table~\ref{tab:serving} r
 This is in-process mechanism evidence, not a production-trace study.
 
 \begin{table}[!t]
-\caption{Sticky noise $\neq$ ExactFrac (Cora, 3 seeds). Cross-client ExactFrac / pre-session audit replay / clean-slice threshold flicker / shared multi-client cache hit. Sticky LBP freezes one draw per client; HARP keeps a shared clean majority.}
+\caption{Sticky noise $\neq$ ExactFrac (Cora, 3 seeds; 8 clients; shared LRU $1024$). Sticky LBP freezes one draw per client; HARP keeps a shared clean majority.}
 \label{tab:sla}
 \centering
-\scriptsize
+\resizebox{\columnwidth}{!}{%
 \begin{tabular}{@{}lcccc@{}}
 \toprule
-\textbf{Policy} & \textbf{Cross-EF}$\uparrow$ & \textbf{Audit replay}$\uparrow$ & \textbf{Clean flick.}$\downarrow$ & \textbf{Shared hit}$\uparrow$ \\
+\textbf{Policy} & \textbf{Cross-EF}$\uparrow$ & \textbf{Audit}$\uparrow$ & \textbf{Clean flick.}$\downarrow$ & \textbf{Cache hit}$\uparrow$ \\
 \midrule
 none & 1.000 & 1.000 & 0.000 & 0.869 \\
 LBP fresh & 0.000 & 0.000 & 0.089 & 0.004 \\
 LBP sticky ($B{=}1$) & 0.000 & 0.000 & 0.089 & 0.619 \\
 HARP (Frac $0.40$) & 0.600 & 0.600 & 0.000 & 0.769 \\
 \bottomrule
-\end{tabular}
+\end{tabular}%
+}
 \end{table}
 
 \begin{table}[!t]
@@ -745,40 +748,27 @@ What HARP keeps is (i)~strictly lower LiRA than undefended and (ii)~Acc recovery
 TPR@1\% FPR follows the same pattern.
 
 \begin{table}[!t]
-\caption{Audit controls (GraphSAGE; 3 seeds). $^\star$heterophilic. (b)~comparative shadow scaling (not HARP-only).}
+\caption{Audit controls (GraphSAGE; 3 seeds). $^\star$heterophilic. (b)~shadow scaling (not HARP-only). Acc invariant in (b): none $0.879$, LBP $0.716$, HARP $0.836$.}
 \label{tab:audit}
 \centering
-\scriptsize
-\begin{minipage}[t]{0.42\linewidth}
-\centering
-\textbf{(a) Undefended LiRA} ($n_{\mathrm{sh}}{=}4$)\\[0.2em]
-\begin{tabular}{@{}lrrr@{}}
+\resizebox{\columnwidth}{!}{%
+\begin{tabular}{@{}lrrr@{\hspace{10pt}}lccc@{}}
 \toprule
-\textbf{Dataset} & $\mathbf{n}$ & \textbf{Acc} & \textbf{LiRA} \\
-\midrule
-Chameleon$^\star$ & 2\,277 & 0.449 & 0.623 \\
-Cora & 2\,708 & 0.879 & 0.568 \\
-Actor$^\star$ & 7\,600 & 0.335 & 0.610 \\
-Photo & 7\,650 & 0.825 & 0.500 \\
-PubMed & 19\,717 & 0.876 & 0.505 \\
-ogbn-arxiv & 169\,343 & 0.666 & 0.503 \\
-\bottomrule
-\end{tabular}
-\end{minipage}\hfill
-\begin{minipage}[t]{0.56\linewidth}
-\centering
-\textbf{(b) Cora shadow scaling (LiRA / TPR@1\%)}\\[0.2em]
-\begin{tabular}{@{}lccc@{}}
-\toprule
+\multicolumn{4}{c}{\textbf{(a) Undef.\ LiRA} ($n_{\mathrm{sh}}{=}4$)} &
+\multicolumn{4}{c}{\textbf{(b) Cora LiRA / TPR@1\%}} \\
+\cmidrule(r{6pt}){1-4}\cmidrule(l{6pt}){5-8}
+\textbf{Dataset} & $\mathbf{n}$ & \textbf{Acc} & \textbf{LiRA} &
 $\mathbf{n_{\mathrm{sh}}}$ & \textbf{none} & \textbf{LBP} & \textbf{HARP} \\
 \midrule
-4 & 0.568 / 0.033 & 0.517 / 0.022 & 0.534 / 0.014 \\
-16 & 0.808 / 0.201 & 0.555 / 0.008 & 0.670 / 0.057 \\
-64 & 0.847 / 0.265 & 0.561 / 0.008 & 0.677 / 0.075 \\
+Chameleon$^\star$ & 2277 & 0.449 & 0.623 & 4 & 0.568/0.033 & 0.517/0.022 & 0.534/0.014 \\
+Cora & 2708 & 0.879 & 0.568 & 16 & 0.808/0.201 & 0.555/0.008 & 0.670/0.057 \\
+Actor$^\star$ & 7600 & 0.335 & 0.610 & 64 & 0.847/0.265 & 0.561/0.008 & 0.677/0.075 \\
+Photo & 7650 & 0.825 & 0.500 & & & & \\
+PubMed & 19717 & 0.876 & 0.505 & & & & \\
+ogbn-arxiv & 169343 & 0.666 & 0.503 & & & & \\
 \bottomrule
-\end{tabular}\\[0.4em]
-{\scriptsize Acc invariant: none $0.879$, LBP $0.716$, HARP $0.836$. Chameleon mirrors the pattern (at $n_{\mathrm{sh}}{=}64$: none $0.965$, LBP $0.685$, HARP $0.811$; $\Delta$Acc vs.\ LBP $+0.061$).}
-\end{minipage}
+\end{tabular}%
+}
 \end{table}
 
 \subsection{Canaries and large-graph volume}
@@ -798,13 +788,13 @@ Population LiRA barely moves (${\approx}0.59$) under either release defense---de
 We do \emph{not} claim a full $2.4$M-node privacy audit.
 
 \begin{table}[!t]
-\caption{ogbn-products: standard BFS ladder (near-chance) vs.\ canary-stressed $15$k probe ($n_{\mathrm{sh}}{=}4$, 3 seeds). Can.\ $=$ canary-only LiRA.}
+\caption{ogbn-products: standard BFS ladder vs.\ canary-stressed $15$k ($n_{\mathrm{sh}}{=}4$, 3 seeds). Can.\ $=$ canary LiRA.}
 \label{tab:products}
 \centering
-\scriptsize
+\resizebox{\columnwidth}{!}{%
 \begin{tabular}{@{}lcccc@{}}
 \toprule
-\textbf{Setting} & \textbf{Acc} & \textbf{LiRA} & \textbf{Can.} & \textbf{ExactFrac} \\
+\textbf{Setting} & \textbf{Acc} & \textbf{LiRA} & \textbf{Can.} & \textbf{EF} \\
 \midrule
 Full load none ($2.45$M) & $0.695$ & --- & --- & $1.00$ \\
 Std.\ $15$k none/LBP/HARP & $0.876$/$0.343$/$0.693$ & $0.528$/$0.501$/$0.513$ & --- & $1$/$0$/$0.60$ \\
@@ -812,7 +802,8 @@ Canary none & $0.861$ & $0.593$ & $0.997$ & $1.00$ \\
 Canary LBP $b{=}0.3$ & $0.379$ & $0.581$ & $0.805$ & $0.00$ \\
 Canary HARP & $0.685$ & $0.592$ & $0.891$ & $0.60$ \\
 \bottomrule
-\end{tabular}
+\end{tabular}%
+}
 \end{table}
 If audit LiRA${\approx}0.5$, prefer Frac${=}0$; if LiRA$\gg 0.5$ or ExactFrac$\ge c$ is required, set Frac on val Acc.
 
