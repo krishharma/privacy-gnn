@@ -60,17 +60,17 @@ shaikh.arifuzzaman@unlv.edu}
 
 \begin{abstract}
 GNN prediction APIs emit softmax scores consumed by ranking, routing, A/B tests, and compliance pipelines.
-Many such pipelines impose a concrete service-level requirement: a positive fraction of responses must be \emph{replay-stable}---bitwise identical under re-query within a session---so caches hit, audit trails reproduce, and score-threshold decisions do not flicker.
-Any fresh uniform posterior perturbation (e.g., Laplace posterior perturbation, LBP) is infeasible under that requirement: every draw changes almost surely (ExactFrac${=}0$).
-We propose \textbf{HARP}, a constrained score-serving \emph{framework}: constructors rank nodes, hop expansion forms a protected set, a pluggable protector runs only there, and Constrained Frac Search (CFS) returns the Acc-maximizing Frac on a finite grid under ExactFrac$\ge c$ and an optional audit cap matched to the attack budget.
-Because selective release is post-processing, HARP composes with any trainer---including DP trainers such as GAP---without degrading $(\varepsilon,\delta)$; we measure HARP$\circ$GAP.
-Under defense-aware LiRA at $n_{\mathrm{shadows}}{=}16$ (5 seeds), HARP is feasible for $c{>}0$ while uniform perturbation is not; under $c{=}0.60$ it keeps a bit-stable, zero-flicker clean majority with competitive Acc/ECE.
-Constructor choice is a measured slice-privacy dial: ensemble ranking cuts clean-slice AUROC $0.669\rightarrow 0.594$ at matched ExactFrac ($p{<}10^{-3}$ vs.\ random), and deterministic confidence smoothing lowers it further with zero Acc change.
-HARP is not universal LiRA dominance and not DP on released scores; residual clean-slice risk is a structural limit of any ExactFrac$>0$ policy.
+Production serving systems cache predictions by request hash and assume deterministic outputs for cache hits and audit replay; randomized release noise breaks those assumptions.
+We formalize the resulting operational requirement as ExactFrac---the fraction of responses that remain bitwise identical under re-query---and study Acc under ExactFrac$\ge c$ (study default $c{=}0.60$; $c$ is an operator dial).
+Any fresh uniform posterior perturbation (e.g., LBP) yields ExactFrac${=}0$ almost surely; session-sticky noise is not a substitute (cross-client ExactFrac and pre-session audit replay stay $0$).
+We propose \textbf{HARP}, a constrained score-serving framework: constructors rank nodes, hop expansion forms a protected set, a pluggable protector runs only there, and CFS maximizes Acc under ExactFrac$\ge c$ and an optional audit cap matched to the attack budget.
+Selective release is post-processing, so HARP composes with any trainer---including DP trainers such as GAP---without degrading $(\varepsilon,\delta)$.
+Under defense-aware LiRA at $n_{\mathrm{shadows}}{=}16$ (5 seeds), HARP is feasible for $c{>}0$ while uniform perturbation is not, with competitive Acc/ECE on a bit-stable clean majority.
+Constructor choice is a measured slice-privacy dial ($0.669\rightarrow 0.594$, $p{<}10^{-3}$); residual clean-slice risk is a structural limit of ExactFrac$>0$.
 \end{abstract}
 
 \begin{IEEEkeywords}
-graph neural networks, prediction APIs, ExactFrac SLA, selective release, score serving, data quality
+graph neural networks, prediction APIs, ExactFrac, selective release, score serving, response caching
 \end{IEEEkeywords}
 
 \section{Introduction}
@@ -80,12 +80,14 @@ GNN prediction APIs return softmax vectors for triage, ranking, and analytics~\c
 At scale the API is a continuous data product with Volume (graphs from $10^3$ to $10^6+$ nodes), Velocity (clients re-query), and Veracity (downstream systems need stable, well-calibrated scores).
 Released scores also leak training membership~\cite{shokri2017membership,salem2019mlleaks,carlini2022membership,olatunji2021mia}.
 
-\paragraph{Service-level constraint (ExactFrac).}
-Prediction APIs are not one-shot oracles: clients re-query, caches sit in front of models, compliance pipelines replay past decisions, and score-threshold routers (e.g., route if $p_{\mathrm{top}}{>}\theta$) must not flicker under identical inputs.
-We treat that replay stability as an explicit SLA---ExactFrac$\ge c$ (locked $c{=}0.60$): at least a $c$-fraction of node responses must be bitwise identical under re-query within a session.
-This is the natural dual of content-addressable caching and audit logs: a response that changes on every draw cannot be a cache key or a reproducible decision record.
+\paragraph{Why ExactFrac (operational, not invented).}
+Prediction serving is built around \emph{deterministic} request$\rightarrow$response maps: Clipper caches predictions to cut latency under repeated queries~\cite{crankshaw2017clipper}, and NVIDIA Triton hashes model+inputs to return cached outputs without re-execution~\cite{triton2024cache}.
+Those mechanisms are correct only when identical inputs yield identical outputs; a fresh Laplace draw on every query makes the cache key a moving target and breaks audit replay of logged decisions.
+Score-threshold routers (route if $p_{\mathrm{top}}{>}\theta$) likewise need non-flickering scores under re-query.
+We \emph{formalize} that operational need as ExactFrac---the fraction of node responses bitwise identical under re-query---and study Acc subject to ExactFrac$\ge c$.
+Here $c{=}0.60$ is a locked \emph{study default}, not a claimed industry constant; Fig.~\ref{fig:exactfrac-pareto} sweeps $c\in\{0.2,0.4,0.6,0.8\}$ as an operator dial.
 Fresh uniform LBP cannot meet any $c{>}0$ (Remark~\ref{rem:uniform-infeasible}).
-Session-sticky LBP ($B{=}1$) restores per-client cache hits but still yields ExactFrac${=}0$ across clients and fails audit-replay of \emph{pre}-session answers---so sticky noise is not a substitute for ExactFrac.
+Session-sticky LBP ($B{=}1$) is the obvious alternative: Table~\ref{tab:sla} shows it restores some per-client cache hits but keeps cross-client ExactFrac${\approx}0$, fails pre-session audit replay, and leaves clean-slice threshold flicker---so sticky noise is not ExactFrac.
 
 \paragraph{Systems problem.}
 \[
@@ -111,9 +113,9 @@ Within the constrained class, constructors cut clean-slice AUROC ($0.669\rightar
 Measured replay/flicker and multi-tenant cache stress validate ExactFrac as an operational (not only definitional) property.
 
 \subsection{Gap}
-Prior release defenses (LBP~\cite{olatunji2021mia}, MemGuard~\cite{jia2019memguard}) perturb every response.
+Prior release defenses (LBP~\cite{olatunji2021mia}, MemGuard~\cite{jia2019memguard}) perturb every response and are incompatible with prediction caches that assume deterministic outputs~\cite{crankshaw2017clipper,triton2024cache}.
 Train-time GNN MIA methods (GTD, MaskArmor)~\cite{gtd2024,maskarmor2024} and DP-GNNs~\cite{sajadmanesh2023gap,napgnn2023,abadi2016deepdp} do not expose ExactFrac/Mass serving accounting.
-None treat ExactFrac$\ge c{>}0$ as a hard API SLA with constructors, CFS, and trainer composition.
+None formalize ExactFrac$\ge c{>}0$ as a constrained release objective with constructors, CFS, and trainer composition.
 
 \paragraph{Running example (Cora, $c{=}0.60$, $n_{\mathrm{sh}}{=}16$).}
 Equal-mass LBP: Acc${\approx}0.87$/LiRA${\approx}0.59$/ExactFrac${=}0$.
@@ -124,7 +126,7 @@ Strong LBP collapses Acc at ExactFrac${=}0$---secondary when $c{>}0$.
 \begin{enumerate}
   \item \textbf{ExactFrac-constrained release.} Formalize Acc s.t.\ ExactFrac$\ge c$ (optional LiRA$\le\tau$ matched to the audit budget); show uniform perturbation is infeasible for $c{>}0$; give a hop-coverage argument, CFS grid optimality (Prop.~\ref{thm:cfs-opt}), and DP post-processing composition (Prop.~\ref{thm:compose}).
   \item \textbf{HARP serving layer.} Trainer-/protector-agnostic selective release with constructors that lower clean-slice AUROC, CFS under the headline LiRA budget, optional DCS, and HARP$\circ$GAP for finite $\varepsilon$ plus ExactFrac controls.
-  \item \textbf{Constraint-aware evaluation.} Headline LiRA at $n_{\mathrm{sh}}{=}16$; measured replay/flicker/cache; canary-stressed OGB probe; clean-slice risk reported as a structural limit---not a hidden failure.
+  \item \textbf{Constraint-aware evaluation.} Headline LiRA at $n_{\mathrm{sh}}{=}16$; sticky-vs-ExactFrac serving evidence (Table~\ref{tab:sla}); canary-stressed OGB probe; clean-slice risk reported as a structural limit.
 \end{enumerate}
 
 \section{Background and Related Work}
@@ -158,7 +160,7 @@ Given a trained GNN and release channel, choose a release policy $\Pi$ to
 \quad
 \mathrm{ExactFrac}(\Pi)\ge c,
 \]
-where ExactFrac is the fraction of nodes whose released posterior equals $\hat p_v$ bit-exactly, $\tau\in[0.5,1]$ is an audit threshold, and $c\in[0,1]$ is the required clean fraction.
+where ExactFrac is the fraction of nodes whose released posterior is bitwise identical under independent re-query (equivalently equals $\hat p_v$ under release-only selective Laplace with weak${=}0$), $\tau$ is an audit threshold matched to the LiRA budget, and $c\in[0,1]$ is an operator-chosen clean fraction (study default $0.60$).
 \end{definition}
 
 \begin{remark}[Uniform LBP is infeasible for $c{>}0$]
@@ -338,12 +340,12 @@ It is a constrained ExactFrac serving framework: spend a protector on a hop-expa
 \label{sec:protocol}
 
 \subsection{Pre-declared rules}
-\textbf{Primary objective:} Acc under ExactFrac$\ge c$ (locked $c{=}0.60$).
+\textbf{Primary objective:} Acc under ExactFrac$\ge c$ (study default $c{=}0.60$; swept in Fig.~\ref{fig:exactfrac-pareto}).
 \textbf{Primary metrics:} Acc, ExactFrac, ECE (fidelity).
 \textbf{Audit metric:} LiRA AUROC (and clean-slice confidence AUROC) as deployment constraints---not the headline win condition.
-\textbf{Operational metrics:} Mass, Frac, cache hit rate / QPS.
+\textbf{Operational metrics:} Mass, Frac, cross-client ExactFrac, audit replay, shared-cache hit rate / QPS (Table~\ref{tab:sla}).
 Hyperparameters are not selected to minimize test LiRA.
-Under $c{>}0$, primary baselines are selective policies at matched Frac; equal-mass LBP is the unconstrained ($c{=}0$) reference; strong LBP ($b{=}0.3$) is a secondary published recipe showing Acc collapse under full-graph strong noise.
+Under $c{>}0$, primary baselines are selective policies at matched Frac; equal-mass LBP is the unconstrained ($c{=}0$) reference; sticky LBP is the false substitute for ExactFrac.
 
 \subsection{Systems metrics (definitions)}
 \begin{itemize}
@@ -642,13 +644,32 @@ sel.\ topology (LTE) & yes & $0.826{\pm}0.006$ & $0.536{\pm}0.008$ & $0.647{\pm}
 \end{tabular}
 \end{table}
 
-\paragraph{Why ExactFrac matters (serving benchmark).}
-Content-addressable caches key on bit-exact posteriors (Tables~\ref{tab:cache},~\ref{tab:serving}): fresh LBP never hits; HARP hits on the unprotected majority; session $B{=}1$ restores sticky hits but not cross-client ExactFrac.
-A multi-tenant LRU stress ($60$k Zipf requests, $200$ sessions, caps $256/1024/4096$) yields hit rates none/GAP $0.72/0.88/0.96$, HARP $0.51/0.63/0.74$, LBP $0.06/0.18/0.38$---uniform noise makes session working sets disjoint.
-This is an in-process mechanism bench, not a production-trace study.
+\paragraph{Why ExactFrac matters (serving evidence).}
+Prediction caches assume deterministic outputs~\cite{crankshaw2017clipper,triton2024cache}.
+Table~\ref{tab:sla} separates ExactFrac from sticky noise on Cora (3 seeds; $8$ clients; $20$k Zipf queries; shared LRU $1024$): sticky LBP restores \emph{some} shared-cache hits ($0.62$) but cross-client ExactFrac and pre-session audit replay stay ${\approx}0$, and clean-slice threshold decisions still flicker (${\approx}0.09$).
+HARP keeps cross-client ExactFrac${=}0.60$, zero clean-slice flicker, audit replay $0.60$, and higher shared-cache hits ($0.77$).
+Table~\ref{tab:cache} confirms bitwise re-query rates; Table~\ref{tab:serving} reports single-stream QPS.
+This is in-process mechanism evidence, not a production-trace study.
 
 \begin{table}[!t]
-\caption{In-process serving bench (Cora; $20$k queries; Apple M4 CPU). Content-addressable keys on bit-exact posteriors.}
+\caption{Sticky noise $\neq$ ExactFrac (Cora, 3 seeds). Cross-client ExactFrac / pre-session audit replay / clean-slice threshold flicker / shared multi-client cache hit. Sticky LBP freezes one draw per client; HARP keeps a shared clean majority.}
+\label{tab:sla}
+\centering
+\scriptsize
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+\textbf{Policy} & \textbf{Cross-EF}$\uparrow$ & \textbf{Audit replay}$\uparrow$ & \textbf{Clean flick.}$\downarrow$ & \textbf{Shared hit}$\uparrow$ \\
+\midrule
+none & 1.000 & 1.000 & 0.000 & 0.869 \\
+LBP fresh & 0.000 & 0.000 & 0.089 & 0.004 \\
+LBP sticky ($B{=}1$) & 0.000 & 0.000 & 0.089 & 0.619 \\
+HARP (Frac $0.40$) & 0.600 & 0.600 & 0.000 & 0.769 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[!t]
+\caption{In-process single-stream serving bench (Cora; $20$k queries). Content-addressable keys on bit-exact posteriors.}
 \label{tab:serving}
 \centering
 \scriptsize
@@ -661,8 +682,6 @@ zipf & lbp\_fresh & 0.000 & $9.3{\times}10^3$ & 0.104 & 0.116 \\
 zipf & harp\_fresh & 0.606 & $6.2{\times}10^5$ & ${<}0.001$ & 0.004 \\
 zipf & lbp\_B1 & 0.937 & $1.5{\times}10^5$ & ${<}0.001$ & 0.101 \\
 zipf & harp\_B1 & 0.937 & $2.2{\times}10^6$ & ${<}0.001$ & ${<}0.001$ \\
-uniform & harp\_fresh & 0.515 & $5.3{\times}10^5$ & ${<}0.001$ & 0.004 \\
-bursty & harp\_fresh & 0.594 & $5.6{\times}10^5$ & ${<}0.001$ & 0.004 \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -819,8 +838,9 @@ Audit with defense-aware LiRA ($n_{\mathrm{sh}}{\ge}16$ when affordable); if LiR
 \section{Discussion}
 \label{sec:discussion}
 HARP is for ExactFrac$\ge c{>}0$ with usable Acc---not for beating uniform noise when $c{=}0$ is allowed.
-GAP-agg already meets ExactFrac${=}1$ with finite (often large) $\varepsilon$; HARP's complementary claim is high-Acc ExactFrac \emph{without} training DP, plus constructors/CFS/slice controls that layer on any trainer (Prop.~\ref{thm:compose}).
-\textbf{Limits:} (i)~ExactFrac${>}0$ $\Rightarrow$ infinite global $\varepsilon$ on released scores; (ii)~clean-slice AUROC stays above chance at $c{=}0.60$ after the mitigation stack---structural; (iii)~CFS $\tau$ must track the LiRA budget ($n_{\mathrm{sh}}{=}16$ uses $\tau{=}0.70$, not the $n_{\mathrm{sh}}{=}4$ value $0.55$); (iv)~products privacy is a BFS/canary ladder, not full-graph; (v)~GAP-agg/MemGuard are reimplementations; (vi)~serving benches are in-process mechanism evidence, not production traces.
+ExactFrac formalizes a serving assumption already present in prediction caches~\cite{crankshaw2017clipper,triton2024cache}; $c{=}0.60$ is a study default, and sticky noise is not a substitute (Table~\ref{tab:sla}).
+GAP-agg already meets ExactFrac${=}1$ with finite (often large) $\varepsilon$; HARP's complementary claim is high-Acc ExactFrac without training DP, plus constructors/CFS/slice controls (Prop.~\ref{thm:compose}).
+\textbf{Limits:} (i)~ExactFrac${>}0$ $\Rightarrow$ infinite global $\varepsilon$ on released scores; (ii)~clean-slice AUROC stays above chance at $c{=}0.60$---structural; (iii)~CFS $\tau$ must track the LiRA budget; (iv)~products privacy is a BFS/canary ladder; (v)~GAP-agg/MemGuard are reimplementations; (vi)~serving benches are in-process, not production traces.
 Future: learned constructors, distributed full-graph LiRA, production API traces.
 
 \section{Conclusion}
@@ -830,8 +850,8 @@ Headline evidence uses $n_{\mathrm{sh}}{=}16$; residual clean-slice risk and sco
 Use training-time DP (alone or under HARP) when a legal global $\varepsilon$ is required.
 
 \paragraph{Reproducibility.}
-Code (\texttt{defenses/harp.py}, \texttt{run\_nsh16\_headline.py}, \texttt{run\_cfs\_nsh16.py}, \texttt{run\_products\_canary\_leakage.py}, \texttt{run\_bulletproof.py}), locked configs, and frozen CSVs: \url{https://github.com/krishharma/privacy-gnn}.
-Runs used Darwin arm64 CPU; headline LiRA $n_{\mathrm{shadows}}{=}16$; multi-dataset grids $n_{\mathrm{sh}}{=}4$; CFS under the headline budget uses $\tau{=}0.70$.
+Code (\texttt{defenses/harp.py}, \texttt{run\_nsh16\_headline.py}, \texttt{run\_cfs\_nsh16.py}, \texttt{run\_exactfrac\_sla\_evidence.py}, \texttt{run\_products\_canary\_leakage.py}, \texttt{run\_bulletproof.py}), locked configs, and frozen CSVs: \url{https://github.com/krishharma/privacy-gnn}.
+Headline LiRA $n_{\mathrm{shadows}}{=}16$; CFS uses $\tau{=}0.70$; ExactFrac SLA evidence in Table~\ref{tab:sla}.
 
 \balance
 \begin{thebibliography}{00}
@@ -874,6 +894,8 @@ Runs used Darwin arm64 CPU; headline LiRA $n_{\mathrm{shadows}}{=}16$; multi-dat
 \bibitem{aerni2024misleading} M. Aerni, J. Zhang, and F. Tram\`er, ``Evaluations of machine learning privacy defenses are misleading,'' in \emph{Proc. ACM CCS}, 2024.
 \bibitem{he2021nodemia} X. He, R. Wen, Y. Wu, M. Backes, Y. Shen, and Y. Zhang, ``Node-level membership inference attacks against graph neural networks,'' arXiv:2102.05429, 2021.
 \bibitem{khosla2026structure} M. Khosla, ``Impact of graph structure on membership-inference risk for graph neural networks,'' \emph{Proc. Priv. Enhancing Technol. (PoPETs)}, 2026.
+\bibitem{crankshaw2017clipper} D. Crankshaw, X. Wang, G. Zhou, M. J. Franklin, J. E. Gonzalez, and I. Stoica, ``Clipper: A low-latency online prediction serving system,'' in \emph{Proc. USENIX NSDI}, 2017, pp. 613--627.
+\bibitem{triton2024cache} NVIDIA Corporation, ``Triton Inference Server: Response cache,'' User Guide, 2024. [Online]. Available: \url{https://docs.nvidia.com/deeplearning/triton-inference-server/user-guide/docs/user_guide/response_cache.html}
 \end{thebibliography}
 
 \end{document}

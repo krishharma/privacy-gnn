@@ -23,7 +23,8 @@ Prefer `./venv/bin/python` if a project venv already exists.
 # 2) CFS under ExactFrac≥0.60 and τ=0.70 at n_shadows=16
 ./venv/bin/python run_cfs_nsh16.py
 
-# 3) Constructor slice AUROC, DCS, HARP∘GAP, replay/flicker, serving v2
+# 3) ExactFrac SLA evidence (sticky ≠ ExactFrac) + constructor/DCS/GAP/serving
+./venv/bin/python run_exactfrac_sla_evidence.py
 ./venv/bin/python run_bulletproof.py
 ./venv/bin/python run_stack_slice.py
 
