@@ -59,11 +59,12 @@ shaikh.arifuzzaman@unlv.edu}
 \maketitle
 
 \begin{abstract}
-High-volume GNN prediction APIs serve softmax scores for ranking, routing, A/B tests, and compliance pipelines on graphs from thousands to millions of nodes; production stacks cache by request hash and re-query the same entities under continuous traffic.
-Operators sometimes also need a positive fraction of \emph{raw} model posteriors---unmodified $\hat p_v$ for calibration and downstream score consumers---which is stricter than replaying a previously sampled noisy response from a cache or ledger.
-Fresh uniform release noise cannot meet that raw-exact SLA; global caches and seeded noise raise ReplayFrac without restoring ExactFrac$\equiv$RawExactFrac.
-\textbf{HARP} is a Big-Data score-serving layer for this constrained setting: constructors rank nodes, hop expansion forms a protected set, a protector runs only there, and validation-time Frac search targets Acc under ExactFrac$\ge c$ (study default $c{=}0.60$) with an optional audit dial $\tau$.
-On defense-aware LiRA ($n_{\mathrm{shadows}}{=}16$), HARP is feasible for $c{>}0$ with competitive Acc/ECE on large-graph serving probes; residual clean-slice risk is reported as a structural limit of ExactFrac$>0$.
+Graph neural network (GNN) prediction APIs power ranking, routing, and analytics on graphs with thousands to millions of nodes---but releasing full confidence scores can leak whether a node was in the training set.
+Standard privacy fixes add noise to \emph{every} response: that hides membership cues, yet it also destroys the raw model scores that downstream systems need for calibration, threshold decisions, and compliance.
+Caching or reseeding that noise can make answers \emph{repeatable}, but it still does not return the model's true posterior.
+We formalize this missing service contract as ExactFrac---the fraction of API responses that equal the unmodified model output---and ask how to maximize accuracy subject to ExactFrac$\ge c$ (study default $c{=}0.60$).
+\textbf{HARP} answers that question with selective score serving: it ranks risky nodes, expands a hop neighborhood, protects only that set, and leaves a configurable clean majority exact.
+Under defense-aware LiRA audits ($n_{\mathrm{shadows}}{=}16$) and large-graph serving probes, HARP is feasible whenever $c{>}0$---where uniform and cache-only noise are not---while keeping competitive accuracy and calibration; residual risk on the exact slice is measured and disclosed as a structural limit of ExactFrac$>0$.
 \end{abstract}
 
 \begin{IEEEkeywords}
