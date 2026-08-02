@@ -406,6 +406,26 @@ LOCKED_HARP = {
     "train_on_protected": True,
 }
 
+def deterministic_confidence_smooth(
+    probs: np.ndarray,
+    clean_mask: np.ndarray,
+    theta: float = 0.90,
+    temp: float = 3.0,
+) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    Replay-stable, argmax-preserving temperature flatten on high-confidence
+    clean-slice rows. Deterministic ⇒ ExactFrac and caches are preserved.
+    """
+    p2 = np.asarray(probs, dtype=float).copy()
+    mask = np.asarray(clean_mask, dtype=bool).reshape(-1)
+    hot = mask & (p2.max(axis=1) > float(theta))
+    if hot.any():
+        logp = np.log(np.clip(p2[hot], 1e-12, 1.0)) / float(temp)
+        e = np.exp(logp - logp.max(axis=1, keepdims=True))
+        p2[hot] = e / e.sum(axis=1, keepdims=True)
+    return p2, hot
+
+
 # Paper-default: release-only selective Laplace under ExactFrac SLA (c=0.60 → Frac=0.40).
 LOCKED_HARP_RELEASE = {
     "lam": 0.0,

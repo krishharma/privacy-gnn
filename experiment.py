@@ -878,9 +878,9 @@ def _train_and_predict_gnn(
         tem = train_data.test_mask.detach().cpu().numpy()
         p, mg_stats = apply_memguard(
             p, trm, tem, yn,
-            max_l1=float(defense_params.get("max_l1", 0.2)),
+            max_l1=float(defense_params.get("max_l1", 0.3)),
             seed=int(release_seed),
-            n_steps=int(defense_params.get("n_steps", 80)),
+            n_steps=int(defense_params.get("n_steps", 60)),
         )
         pr = p.argmax(1)
         release_stats.update(mg_stats)
